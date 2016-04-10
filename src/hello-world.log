@@ -1,0 +1,43 @@
+-hello-world  ok<$,ram>
+marker -hello-world  ok<$,ram>
+\ Flash a LED attached to pin RB0, sending a message in Morse-code.  ok<$,ram>
+  ok<$,ram>
+$ff8a con latb  ok<$,ram>
+$ff93 con trisb  ok<$,ram>
+variable ms_count \ determines the timing.  ok<$,ram>
+  ok<$,ram>
+: init ( -- ) 
+  1 trisb mclr  \ want RB0 as output 
+  1 latb mclr   \ initial state is off 
+;  ok<$,ram>
+  ok<$,ram>
+: led_on 1 latb mset ;  ok<$,ram>
+: led_off 1 latb mclr ;  ok<$,ram>
+: gap ms_count @ ms ; \ pause period  ok<$,ram>
+: gap2 gap gap ;  ok<$,ram>
+: dit led_on gap led_off gap2 ;  ok<$,ram>
+: dah led_on gap2 led_off gap2 ;  ok<$,ram>
+  ok<$,ram>
+\ Have looked up the ARRL CW list for the following letters.  ok<$,ram>
+: H dit dit dit dit ;  ok<$,ram>
+: e dit ;  ok<$,ram>
+: l dit dit ;  ok<$,ram>
+: o dah dah dah ;  ok<$,ram>
+: W dit dah dah ;  ok<$,ram>
+: r dit dah dit ;  ok<$,ram>
+: d dah dit dit ;  ok<$,ram>
+  ok<$,ram>
+: greet ( -- ) 
+  H e l l o  gap  W o r l d  gap2 
+;  ok<$,ram>
+  ok<$,ram>
+: main ( n -- ) 
+  ms_count !  \ store for later use in wait 
+  init 
+  begin 
+    greet 
+  again 
+;  ok<$,ram>
+  ok<$,ram>
+100 main  \ exercise the application 
+

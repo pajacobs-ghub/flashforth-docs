@@ -1,0 +1,71 @@
+-speed-test
+marker -speed-test
+\ Waggle PB5 as quickly as we can, in both high- and low-level code.
+\ Before sending this file, we should send asm.txt, bit.txt and bio.txt.
+
+$0024 constant ddrb
+$0025 constant portb    \ RAM address
+$0005 constant portb-io \ IO-space address
+1 #5 lshift constant bit5
+
+: initPB5
+  bit5 ddrb mset \ set pin as output
+  bit5 portb mclr \ initially known state
+;
+
+: cwd ( -- ) [ wdr, ] ; inlined \ we might want to reset the watchdog
+
+\ high-level bit fiddling, presumably slow
+: blink-forth ( -- )
+  initPB5
+  begin
+    bit5 portb c! 0 portb c! \ one cycle, on and off
+    bit5 portb c! 0 portb c!
+    bit5 portb c! 0 portb c!
+    bit5 portb c! 0 portb c!
+    cwd
+  again
+;
+
+\ low-level bit fiddling, via assembler
+: blink-asm ( -- )
+  initPB5
+  [
+  begin,
+    portb-io #5 sbi,  portb-io #5 cbi, \ one cycle, on and off
+    portb-io #5 sbi,  portb-io #5 cbi,
+    portb-io #5 sbi,  portb-io #5 cbi,
+    portb-io #5 sbi,  portb-io #5 cbi,
+    wdr,
+  again,
+  ]
+;
+
+\ high-level bit fiddling with named bits
+portb #5 bit1: PB5-hi inlined
+portb #5 bit0: PB5-lo inlined
+: blink-bits ( -- )
+  initPB5
+  begin
+    PB5-hi PB5-lo \ one cycle
+    PB5-hi PB5-lo
+    PB5-hi PB5-lo
+    PB5-hi PB5-lo
+    cwd
+  again
+;
+
+\ high-level bit fiddling with named bits in IO-space
+portb-io #5 bio1: PB5io-hi inlined
+portb-io #5 bio0: PB5io-lo inlined
+: blink-bits-io ( -- )
+  initPB5
+  begin
+    PB5io-hi PB5io-lo \ one cycle
+    PB5io-hi PB5io-lo
+    PB5io-hi PB5io-lo
+    PB5io-hi PB5io-lo
+    cwd
+  again
+;
+

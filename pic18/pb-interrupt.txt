@@ -1,0 +1,45 @@
+\ Use a push-button on RB0 to get user input, via an interrupt.
+\ This button is labelled S3 on the PICDEM2+ board.
+\ Don't have J6 connected because the LED on RB0 loads the pull-up.
+
+-pb-interrupt
+marker -pb-interrupt
+
+$ff93 constant trisb
+$fff2 constant intcon
+$fff1 constant intcon2
+
+variable count
+variable last-count
+
+: int0-irq
+  [i
+    %10 intcon mtst \ INT0IF
+    if 
+      count @ 1+ count !
+      %10 intcon mclr
+    then
+  i]
+;i
+
+: init ( -- )
+  %01 trisb mset \ RB0 as input, a button press will give 0.
+  %01000000 intcon2 mclr \ interrupt on falling edge
+  ['] int0-irq 0 int! \ install service word
+  %10 intcon mclr \ INT0IF cleared
+  %10000 intcon mset \ INT0 interrupt enable
+;
+
+: main ( -- )
+  0 count !
+  init
+  begin
+    count @ last-count @ - \ change?
+    if 
+      count @ dup last-count ! .
+    then
+    cwd
+  key? until
+;
+
+main  \ exercise the application

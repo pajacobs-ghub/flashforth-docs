@@ -1,0 +1,58 @@
+\ *********************************************************************
+\                                                                     *
+\    Filename:      math.txt                                          *
+\    Date:          14.9.2011   (11-Jun-2013 PJ edits from PZ)        *
+\    FF Version:    3.8                                               *
+\    Copyright:     Mikael Nordman                                    *
+\    Author:        Mikael Nordman                                    *
+\ *********************************************************************
+\    FlashForth is licensed acording to the GNU General Public License*
+\ *********************************************************************
+\ Double and mixed math words
+
+: m* ( n1 n2 -- d )  \ signed 16*16->32 multiply
+  2dup xor >r
+  abs swap abs um*
+  r> ?dnegate
+;
+
+: sm/rem ( d1 n1 -- n2 n3 )
+  2dup xor >r
+  over >r
+  abs >r dabs r> um/mod
+  swap r> ?negate
+  swap r> ?negate
+;
+
+: fm/mod ( d1 n1 -- n2 n3 )
+  dup >r
+  2dup xor >r
+  >r
+  dabs r@ abs um/mod
+  swap r> ?negate swap
+  r> 0< if
+    negate
+    over if
+      r@ rot - swap 1-
+    then
+  then
+  r> drop
+;
+
+: /mod ( n1 n2 -- n3 n4 )
+  >r s>d r> sm/rem
+;
+
+: mod ( n1 n2 -- n3 )
+  /mod drop
+;
+
+: */mod ( n1 n2 n3 -- n4 n5 )
+  >r m* r> sm/rem
+;
+
+: */ ( n1 n2 n3 -- quotient )
+  */mod swap drop
+;
+
+

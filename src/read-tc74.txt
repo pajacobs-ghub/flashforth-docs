@@ -1,0 +1,41 @@
+\ Read temperature from TC74 on PICDEM2+ board.
+\ Modelled on Mikael Nordman's i2c_tcn75.txt.
+\ This program requires i2c_base.txt to be previously loaded.
+-read-tc74
+marker -read-tc74
+
+%1001101 con addr-tc74  \ default 7-bit address for TC74
+
+: add-read-bit ( 7-bit-c -- 8-bit-c )
+  \ Make 8-bit i2c address with bit 0 set.
+  1 lshift 1 or
+;
+: add-write-bit ( 7-bit-c -- 8-bit-c )
+  \ Make 8-bit i2c address with bit 0 clear.
+  1 lshift 1 invert and
+;
+: sign-extend ( c -- n )
+  \ If the TC74 has returned a negative 8-bit value,
+  \ we need to sign extend to 16-bits with ones.
+  dup $7f > if $ff80 or then
+;
+: init-tc74 ( -- )
+  \ Selects the temperature register for subsequent reads.
+  addr-tc74 add-write-bit i2cws 0 i2c! spen
+;
+: degrees@ ( -- n )
+  \ Wake the TC74 and receive its register value.
+  addr-tc74 add-read-bit i2cws i2c@nak sign-extend
+;
+: main ( -- ) 
+  i2cinit
+  init-tc74
+  begin
+    degrees@ . 
+    #1000 ms
+  again
+;
+
+\ Now, report temperature in degrees C 
+\ while we warm up the TC74 chip with our fingers...
+decimal main

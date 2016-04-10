@@ -1,0 +1,42 @@
+-hello-world
+marker -hello-world
+\ Flash a LED attached to pin RB0, sending a message in Morse-code.
+
+$ff8a constant latb
+$ff93 constant trisb
+variable ms_count \ determines the timing.
+
+: init ( -- )
+  1 trisb mclr  \ want RB0 as output
+  1 latb mclr   \ initial state is off
+;
+
+: led_on 1 latb mset ;
+: led_off 1 latb mclr ;
+: gap ms_count @ ms ; \ pause period
+: gap2 gap gap ;
+: dit led_on gap led_off gap2 ;
+: dah led_on gap2 led_off gap2 ;
+
+\ Have looked up the ARRL CW list for the following letters.
+: H dit dit dit dit ;
+: e dit ;
+: l dit dit ;
+: o dah dah dah ;
+: W dit dah dah ;
+: r dit dah dit ;
+: d dah dit dit ;
+
+: greet ( -- )
+  H e l l o  gap  W o r l d  gap2
+;
+
+: main ( n -- )
+  ms_count !  \ store for later use in gap
+  init
+  begin
+    greet
+  again
+;
+
+#100 main  \ exercise the application

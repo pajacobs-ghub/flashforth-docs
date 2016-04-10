@@ -1,0 +1,24 @@
+-jump-table-ex
+marker -jump-table-ex
+
+\ Set up the words that we want to selectively execute.
+: ring  ( --) ." ring ring" ;
+: open  ( --) ." opening" ;
+: laugh ( --) ." ha ha" ;
+: cry   ( --) ." crying" ; 
+
+\ Store the execution tokens in a table that allots
+\ into flash memory.
+flash
+create actions ' ring , ' open , ' laugh , ' cry ,
+ram
+
+: do-action ( n --)
+  0 max 3 min
+  cells actions + @ execute ;
+
+\ Call up the actions.
+3 do-action
+0 do-action
+2 do-action
+5 do-action

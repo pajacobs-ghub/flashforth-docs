@@ -1,0 +1,46 @@
+\ mcp3422.txt
+\ Play with mcp3422 eval board.
+\ PJ, 21-Oct-2013
+
+-mcp3422
+marker -mcp3422
+
+: mcp3422init ( -- )
+  \ $d0 is default mcp4322 address for writing
+  \ $9c is config for 18-bit continuous conversions of ch 1
+  $d0 i2cws $9c i2c! spen
+;
+
+: mcp3422@ ( -- d f ) \ Read the 18-bit result as 3 bytes
+  $d1 i2cws i2c@ak           \ only 2 bits in first byte
+  dup $3 > if $fffa or then  \ sign-extend to full cell
+  i2c@ak $8 lshift i2c@ak or \ next two bytes into one cell 
+  swap                       \ leave double result
+  i2c@nak $80 and 0=         \ leave true if result is latest
+;
+
+: microvolts ( d1 -- d2 )
+  \ The least-significant bit corresponds to 15.625 microvolts
+  #125 #8 m*/
+;
+
+: (d.3) ( d -- )
+  swap over dabs
+  <# # # # [char] . hold #s rot sign #> 
+;
+
+: report ( d f -- ) \ Assuming decimal, print millivolt value
+  cr if ." new " else ." old " then 
+  microvolts (d.3) type space ." mV "
+;
+
+: mcp3422-run ( -- )
+  decimal
+  i2cinit mcp3422init 
+  begin
+    mcp3422@ report
+    #1000 ms
+  key? until
+  hex
+;
+

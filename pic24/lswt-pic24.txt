@@ -1,0 +1,51 @@
+\ lwst-pic24
+\ Low-speed wind tunnel on PIC24FV32KA301
+\ PJ 2015-10-12
+\
+\ Builds on top of 
+\ (1) i2c-base-pic24fv32ka30x.txt
+\ (2) lcd2s-pic24.txt 
+\ (3) read-adc-pic24.txt
+
+-lswt
+marker -lswt
+
+: get.count ( u -- u ) \ AN0=chan1, AN1=chan2
+  adc.select adc@.filter
+;
+
+: count.to.pa10 ( n1 -- n2 ) \ adc counts to tenths of Pa
+  204 - dup 0< if drop 0 then
+  dup 4095 */ 223 102 */
+; 
+  
+: (d.1) ( d -- ) \ format with a decimal point before the last digit
+  swap over dabs
+  <# # [char] . hold #s rot sign #> 
+;
+
+: report.pa ( n -- ) \ Assuming decimal, print Pascal value
+  count.to.pa10 s>d (d.1) type ."  Pa"
+;
+
+: report.pa.lcd ( n -- ) \ Display Pascal value to LCD
+  count.to.pa10 s>d (d.1) lcd.type s"  Pa" lcd.type
+;
+
+: main ( -- )
+  decimal
+  adc.init
+  i2c.init
+  lcd.clear
+  begin
+    cr ." chan 1 " 0 get.count report.pa
+    space ." chan 2 " 1 get.count report.pa
+    lcd.clear s" ch1 " lcd.type 0 get.count report.pa.lcd
+    lcd.go.line.2 s" ch2 " lcd.type 1 get.count report.pa.lcd
+    #800 ms
+  key? until
+;
+
+\ To make the application start at (power-on) reset
+\ ' main is turnkey
+

@@ -1,0 +1,62 @@
+\ lcd2s.txt
+\ Words for the Modtronix LCD2S display
+\ Peter J. 26-Oct-2013, 29-Sep-2015
+
+\ Assume that i2c-base-xxxx has been loaded.
+
+-lcd2s
+marker -lcd2s
+
+$28 constant lcd.7bit.addr \ both address switches off
+
+: lcd.c! ( c -- ) 
+  lcd.7bit.addr i2c.addr.write 
+  if 
+    i2c.c! drop
+  else
+    drop
+  then
+  i2c.stop 
+;
+
+: remember ( -- ) $8d lcd.c! ;
+
+: blight.off ( -- ) $20 lcd.c! ;
+: blight.on ( -- ) $28 lcd.c! ;
+
+: lcd.clear ( -- ) $8c lcd.c! ;
+
+: lcd.curs.pos ( row col -- )
+  swap \ now have S: col row
+  lcd.7bit.addr i2c.addr.write
+  if
+    $8a i2c.c! drop 
+    i2c.c! drop i2c.c! drop
+  else
+    drop drop
+  then 
+  i2c.stop 
+;
+
+: lcd.go.line.2 ( -- )
+  $2 $1 lcd.curs.pos
+;
+ 
+: lcd.type ( c-addr n -- ) \ send string to be parsed
+  lcd.7bit.addr i2c.addr.write 
+  if 
+    $80 i2c.c! drop 
+    for c@+ i2c.c! drop next
+  else
+    drop drop
+  then
+  i2c.stop drop 
+; 
+
+: lcd.hello ( -- )
+  i2c.init
+  lcd.clear
+  s" Hello" lcd.type 
+  lcd.go.line.2 
+  s" World!" lcd.type
+;

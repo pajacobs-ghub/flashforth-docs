@@ -1,0 +1,6 @@
+: .mem  ( -- )  \ print current memory locations
+   base @  hex
+   cr ." flash  "  flash  here #4 u.r
+   cr ." eeprom "  eeprom here #4 u.r
+   cr ." ram    "  ram    here #4 u.r
+   base !  ;

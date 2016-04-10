@@ -1,0 +1,39 @@
+-speed-test -speed-test ?
+marker -speed-test  ok<$,ram>
+\ Waggle RB1 as quickly as we can, in both high- and low-level code.  ok<$,ram>
+\ Before sending this file, we should send asm.txt so that we have  ok<$,ram>
+\ the clrwdt, word available.  ok<$,ram>
+  ok<$,ram>
+$ff8a con latb  ok<$,ram>
+$ff93 con trisb  ok<$,ram>
+  ok<$,ram>
+: initRB1 
+  %10 trisb mclr \ RB1 as output 
+  %10 latb mclr \ initially known state 
+;  ok<$,ram>
+  ok<$,ram>
+\ high-level bit fiddling, presumably slow  ok<$,ram>
+: blink-forth ( -- ) 
+  initRB1 
+  begin 
+    %10 latb c! 0 latb c! 
+    %10 latb c! 0 latb c! 
+    %10 latb c! 0 latb c! 
+    %10 latb c! 0 latb c! 
+    cwd \ We have to kick the watch dog ourselves. 
+  again 
+;  ok<$,ram>
+  ok<$,ram>
+\ low-level bit fiddling, via assembler  ok<$,ram>
+: blink-asm ( -- ) 
+  initRB1 
+  [  ok<$,ram>
+  begin,  ok<$,ram>29d8 
+    latb 1 a, bsf,  latb 1 a, bcf, \ one cycle, on and off  ok<$,ram>29d8 
+    latb 1 a, bsf,  latb 1 a, bcf,  ok<$,ram>29d8 
+    latb 1 a, bsf,  latb 1 a, bcf,  ok<$,ram>29d8 
+    latb 1 a, bsf,  latb 1 a, bcf,  ok<$,ram>29d8 
+    clrwdt, \ kick the watch dog  ok<$,ram>29d8 
+  again,  ok<$,ram>
+  ] 
+;  ok<$,ram>

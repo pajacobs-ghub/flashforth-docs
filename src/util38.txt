@@ -1,0 +1,91 @@
+\ *********************************************************************
+\                                                                     *
+\    Filename:      util38.txt                                        *
+\    FlashForth:    3.8                                               *
+\    MCU            PIC18F                                            *
+\    Application:                                                     *
+\                                                                     *
+\    Author:        Pete Zawasky                                      *
+\    Created:       12:55 PM 9/30/2011   ppz                          *
+\    Last Edit      11:37 AM 6/8/2013    ppz                          *
+\                                                                     *
+\ *********************************************************************
+\  Based on util.fth by Mikael Nordman                                *
+\ *********************************************************************
+\  FlashForth is licensed acording to the GNU General Public License  *
+\ *********************************************************************
+
+-util
+marker -util
+decimal ram
+
+\ *********************************************************************
+
+: forget   ( <name> -- )
+   bl word latest @ (f) abort" ?"
+   c>n 2- dup @ abort" ?"
+   dup flash dp ! @ latest ! ram  ;
+  
+: .mem  ( -- )          \ print current memory locations
+   base @  hex
+   cr ." flash  "  flash  here #4 u.r
+   cr ." eeprom "  eeprom here #4 u.r
+   cr ." ram    "  ram    here #4 u.r
+   base !  ;
+   
+: <=   ( n1 n2 -- flag )
+   -  1-  0<  ;    \ leave true flag if n1 less than or equal to n2
+   
+: ?dup ( x -- 0 | x x )
+   dup if dup then  ;    \ duplicate TOS only if non-zero
+   
+: fill   ( c-addr u c -- ) \ fill u bytes with c starting at c-addr
+   rot !p>r swap
+   for
+     dup pc! p+
+   next
+   r>p  drop  ;   
+
+: erase  ( c-addr u -- )
+   0 fill  ;
+
+: blanks  ( c-addr u -- )
+   bl fill  ;
+
+: pick ( xu ... x0 u -- xu ... x0 xu)
+   2* 3 + sp@ swap - @  ;
+
+: ?    ( addr -- )      \ print unsigned contents at addr
+   2 spaces @ u.  ;     \  in the current base (non-standard)
+   
+: c?   ( addr -- )      \ print byte contents at addr
+   2 spaces c@ .  ;     \  in the current base
+   
+: c?%  ( addr -- )                 \ print byte contents at addr
+   2 spaces base @ swap            \  in binary
+   c@ 8 bin u.r  base !  ;
+   
+\ Compile a word which creates n cell indexed arrays.
+\ compile-time       n array <name> where n is size of array
+\ run-time           i <name> where i is the array index
+\                               and i is zero based (0...n-1)
+: array  ( n -- )
+   create cells allot
+   does>  ( i -- 'cell )  swap cells +  ;   
+   
+\ Compile a word which creates n indexed character arrays.
+\ compile-time       n carray <name>  where n is size of array
+\ run-time           i <name> where i is the array index
+\                               and i is zero based (0...n-1)
+: carray ( n -- ) 
+   create  allot 
+   does>  ( i -- 'char ) +  ;
+
+\ Create a 20 character array in eeprom called CALIBRATE.
+\  eeprom
+\  decimal 20 carray calibrate
+\  ram    
+   
+ram  hex
+
+

@@ -1,0 +1,68 @@
+\ spi1-base-pic24fv32ka302.txt
+\ Words to drive the SPI1 module on the PIC24FV32KA302
+\ PJ 01-Feb-2016
+-spi1-base
+marker -spi1-base
+
+\ Registers of interest for SPI1
+$0070 constant cnpu2 \ CN16PUE is bit 0
+$0084 constant ifs0 \ SPI1IF is bit 10
+$02c8 constant trisb     
+$02ca constant portb     
+$02cc constant latb
+$02ce constant odcb     
+$0240 constant spi1stat
+$0242 constant spi1con1
+$0244 constant spi1con2
+$0248 constant spi1buf
+$04e2 constant ansb
+$0770 constant pmd1 \ SPI1MD is bit 3
+
+\ bit masks
+$8000 constant mSS1 ( RB15 )
+$0800 constant mSCK1 ( RB11 )
+$0400 constant mSDI1 ( RB10 )
+$2000 constant mSDO1 ( RB13 )
+$0400 constant mSPI1IF
+$8000 constant mSPIEN
+$0040 constant mSPIROV
+
+\ !SS1 is on RB15
+: spi.select ( -- ) mSS1 latb mclr ;
+: spi.deselect ( -- ) mSS1 latb mset ;
+
+: spi.init ( -- ) \ set up SPI1 as master
+  $ac ansb mclr \ enable digital for RB15,13,11,10
+  mSCK1 trisb mclr \ SCK as output
+  mSCK1 latb mclr \ clock idles low
+  mSDO1 trisb mclr \ MOSI as output
+  mSDI1 trisb mset \ MISO as input
+  $0001 cnpu2 ! \ activate pull-up on MISO (SDI1/CN16/RB10) only
+  mSS1 trisb mclr \ SS1 as output
+  mSS1 latb mset \ deselect
+  $0004 pmd1 mclr \ allow the module to be used
+  $013d spi1con1 ! \ MODE16=0, SMP=0 CKE=1, CKP=0, MSTEN=1 
+                   \ sec-prescale 1:1, pri-prescale 16:1
+  $0000 spi1con2 ! \ legacy mode
+  mSPIROV spi1stat mclr
+  mSPIEN spi1stat mset \ enable module
+  mSPI1IF ifs0 mclr
+;
+: spi.close ( -- )
+  mSPIEN spi1stat mclr
+  mSPI1IF ifs0 mclr
+;
+: spi.wait ( -- ) 
+  begin mSPI1IF ifs0 mtst until
+  mSPI1IF ifs0 mclr
+;
+: spi.cexch ( c1 -- c2 ) spi1buf c! spi.wait spi1buf c@ ;
+: spi.csend ( c1 -- ) spi.cexch drop ;
+
+: spi.test ( -- ) 
+  spi.init
+  spi.select
+  $1c spi.csend \ an arbitrary byte
+  spi.deselect
+  spi.close
+;

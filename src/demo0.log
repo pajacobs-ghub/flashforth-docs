@@ -1,0 +1,19 @@
+FlashForth V3.8
+
+marker -demo0  ok<$,ram>
+$ff8a con latb  ok<$,ram>
+$ff93 con trisb  ok<$,ram>
+: init 
+1 trisb mclr \ want RB0 as output 
+;  ok<$,ram>
+: do_output 
+latb c@ 1 xor latb c! \ toggle RB0 
+;  ok<$,ram>
+: wait 
+500 ms 
+;  ok<$,ram>
+: main 
+init 
+begin do_output wait again 
+;  ok<$,ram>
+main 

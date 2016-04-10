@@ -1,0 +1,66 @@
+\ spi2-base-k22.txt
+\ Words to drive the SPI2 module on the PIC18F26K22
+\ PJ 31-Jan-2016
+-spi2-base
+marker -spi2-base
+
+\ Registers of interest for MSSP2
+$ff39 constant anselb
+$ff61 constant wpub
+$ff69 constant ssp2con3
+$ff6c constant ssp2con1
+$ff6d constant ssp2stat
+$ff6e constant ssp2add
+$ff6f constant ssp2buf
+$ff81 constant portb     
+$ff8a constant latb      
+$ff93 constant trisb     
+$ffa4 constant pir3
+$fff1 constant intcon2
+
+\ bit masks
+%0001 constant mSS2 ( RB0 )
+%0010 constant mSCK2 ( RB1 )
+%0100 constant mSDI2 ( RB2 )
+%1000 constant mSDO2 ( RB3 )
+$80 constant mRBPU
+$80 constant mSSP2IF
+$20 constant mSSP2EN
+
+\ !SS2 is on RB0
+: spi.select ( -- ) mSS2 latb mclr ;
+: spi.deselect ( -- ) mSS2 latb mset ;
+
+: spi.init ( -- ) \ set up SPI2 as master
+  $0f anselb mclr \ enable digital for RB3 through RB0
+  mSCK2 trisb mclr \ SCK as output
+  mSCK2 latb mclr \ clock idles low
+  mSDO2 trisb mclr \ MOSI as output
+  mSDI2 trisb mset \ MISO as input
+  $04 wpub c! \ activate pull-up on MISO (RB2) only
+  mRBPU intcon2 mclr \ enable pull-ups
+  mSS2 trisb mclr \ SS2 as output
+  mSS2 latb mset \ deselect
+  %01000000 ssp2stat c! \ SMP=0 CKE=1
+  %00100010 ssp2con1 c! \ enable, CKP=0, Fosc/64
+  mSSP2IF pir3 mclr
+  ssp2buf c@ drop \ will clear BF
+;
+: spi.close ( -- )
+  mSSP2EN ssp2con1 mclr
+  mSSP2IF pir3 mclr
+;
+: spi.wait ( -- ) 
+  begin mSSP2IF pir3 mtst until
+  mSSP2IF pir3 mclr
+;
+: spi.cexch ( c1 -- c2 ) ssp2buf c! spi.wait ssp2buf c@ ;
+: spi.csend ( c1 -- ) spi.cexch drop ;
+
+: spi.test ( -- ) 
+  spi.init
+  spi.select
+  $1c spi.csend \ an arbitrary byte
+  spi.deselect
+  spi.close
+;

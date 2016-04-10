@@ -1,0 +1,48 @@
+\ Use a push-button on RB0 to get user input.
+\ This button is labelled S3 on the PICDEM2+ board.
+-pb-demo
+marker -pb-demo
+
+$ff81 con portb
+$ff8a con latb
+$ff93 con trisb
+
+variable count
+
+: init ( -- )
+  %01 trisb mset \ RB0 as input
+  %10 trisb mclr \ RB1 as output
+  %10 latb mclr
+;
+: RB1toggle ( -- )
+  latb c@ %10 xor latb c!
+; 
+: RB0@ ( -- c )
+  portb c@ %01 and
+;
+: button? ( -- f )
+  \ Check for button press, with software debounce.
+  \ With the pull-up in place, a button press will give 0.
+  RB0@ if
+    0
+  else
+    #10 ms
+    RB0@ if 0 else -1 then
+  then
+;
+
+: main ( -- )
+  0 count !
+  init
+  begin
+    button? if 
+      RB1toggle
+      count @ 1+ count !
+      count @ .
+      #200 ms \ allow time to release button
+    then
+    cwd
+  again
+;
+
+main  \ exercise the application

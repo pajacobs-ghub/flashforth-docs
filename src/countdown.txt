@@ -1,0 +1,9 @@
+-countdown
+marker -countdown
+: countdown1 ( n --)
+  begin cr dup . 1- dup 0= until
+  drop ;
+5 countdown1
+: countdown2 ( n --)
+  for cr r@ . next ;
+5 countdown2

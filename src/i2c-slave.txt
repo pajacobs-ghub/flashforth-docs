@@ -1,0 +1,197 @@
+-i2c-slave
+marker -i2c-slave
+\ Make the FlashForth demo board into an I2C slave.
+\ An I2C master can read and write to a buffer here,
+\ the least-significant bit of the first byte controls
+\ the LED attached to pin RB0.
+
+$ff81 con portb
+$ff82 con portc
+$ff8a con latb
+$ff93 con trisb
+$ff94 con trisc
+
+: led_on ( -- )
+  %00000001 latb mset
+;
+: led_off ( -- )
+  %00000001 latb mclr
+;
+: err_led_on ( -- )
+  %00000010 latb mset
+;
+: err_led_off ( -- )
+  %00000010 latb mclr
+;
+
+\ Establish a couple of buffers in RAM, together with index variables.
+ram
+8 con buflen
+\ Receive buffer for incoming I2C data.
+create rbuf buflen allot
+variable rindx
+: init_rbuf ( -- )
+  rbuf buflen erase
+  0 rindx !
+;
+: incr_rindx ( -- ) \ increment with wrap-around
+  rindx @ 1 + 
+  dup buflen = if drop 0 then
+  rindx !
+;
+: save_to_rbuf ( c -- )
+  rbuf rindx @ + c!
+  incr_rindx
+;
+
+\ Send buffer with something interesting for the I2C master to read. 
+create sbuf buflen allot
+variable sindx
+: incr_sindx ( -- ) \ increment with wrap-around
+  sindx @ 1 + 
+  dup buflen = if drop 0 then
+  sindx !
+;
+: init_sbuf ( -- ) \ fill with counting integers, for interest
+  buflen
+  for
+    r@ 1+
+    sbuf r@ + c!
+  next
+  0 sindx !
+;
+
+\ I2C-related definitions and code
+$ffc5 con sspcon2
+$ffc6 con sspcon1
+$ffc7 con sspstat
+$ffc8 con sspadd
+$ffc9 con sspbuf
+$ff9e con pir1
+
+\ PIR1 bits
+%00001000 con sspif
+
+\ SSPSTAT bits
+%00000001 con bf
+%00000100 con r_nw
+%00001000 con start_bit
+%00010000 con stop_bit
+%00100000 con d_na
+%01000000 con cke
+%10000000 con smp
+
+d_na start_bit or r_nw or bf or con stat_mask
+
+\ SSPCON1 bits
+%00010000 con ckp
+%00100000 con sspen
+%01000000 con sspov
+%10000000 con wcol
+
+\ SSPCON2 bits
+%00000001 con sen
+
+: i2c_init ( -- )
+  %00011000 trisc mset \ RC3==SCL RC4==SDA
+  %00000110 sspcon1 c! \ Slave mode with 7-bit address
+  sen sspcon2 mset \ Clock stretching enabled
+  smp sspstat mset \ Slew-rate disabled
+  $52 1 lshift sspadd c! \ Slave address
+  sspen sspcon1 mset \ Enable MSSP peripheral
+;
+
+: release_clock ( -- )
+  ckp sspcon1 mset
+;
+
+: i2c_service ( -- )
+  \ Check the state of the I2C peripheral and react.
+  \ See App Note 734 for an explanation of the 5 states.
+  \ 
+  \ State 1: i2c write operation, last byte was address.
+  \ D_nA=0, S=1, R_nW=0, BF=1
+  sspstat c@ stat_mask and %00001001 =
+  if
+    sspbuf @ drop
+    init_rbuf
+    release_clock
+    exit
+  then
+  \ State 2: i2c write operation, last byte was data.
+  \ D_nA=1, S=1, R_nW=0, BF=1
+  sspstat c@ stat_mask and %00101001 =
+  if
+    sspbuf c@ save_to_rbuf
+    release_clock
+    exit
+  then
+  \ State 3: i2c read operation, last byte was address.
+  \ D_nA=0, S=1, R_nW=1
+  sspstat c@ %00101100 and %00001100 =
+  if
+    sspbuf c@ drop
+    0 sindx !
+    wcol sspcon1 mclr
+    sbuf sindx @ + c@ sspbuf c!
+    release_clock
+    incr_sindx
+    exit
+  then
+  \ State 4: i2c read operation, last byte was outgoing data.
+  \ D_nA=1, S=1, R_nW=1, BF=0
+  sspstat c@ stat_mask and %00101100 =
+  ckp sspcon1 mtst 0=
+  and
+  if
+    wcol sspcon1 mclr
+    sbuf sindx @ + c@ sspbuf c!
+    release_clock
+    incr_sindx
+    exit
+  then
+  \ State 5: master NACK, slave i2c logic reset.
+  \ From AN734: D_nA=1, S=1, BF=0, CKP=1, however,
+  \ we use just D_nA=1 and CKP=1, ignoring START bit.
+  \ This is because master may have already asserted STOP
+  \ before we service the final NACK on a read operation.
+  d_na sspstat mtst 0 > ckp sspcon1 mtst 0 > and
+  stop_bit sspstat mtst or
+  if
+    exit \ Nothing needs to be done.
+  then
+  \ We shouldn't arrive here...
+  err_led_on
+  cr ." Error "
+  ." sspstat " sspstat c@ u.
+  ." sspcon1 " sspcon1 c@ u.
+  ." sspcon2 " sspcon2 c@ u.
+  cr
+  begin again \ Hang around until watch-dog resets MCU.
+;
+
+
+: init ( -- )
+  %00000011 trisb mclr  \ want RB0,RB1 as output pins
+  init_rbuf
+  init_sbuf
+  i2c_init
+  led_on err_led_on #200 ms led_off err_led_off
+;
+
+: main ( n -- )
+  cr ." Start I2C slave "
+  init
+  begin
+    sspif pir1 mtst 
+    if
+      sspif pir1 mclr 
+      i2c_service
+    then
+    rbuf c@ %00000001 and
+    if led_on else led_off then
+    cwd
+  again
+;
+
+\ ' main is turnkey

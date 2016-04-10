@@ -1,0 +1,51 @@
+\ spi-base-avr.txt
+\ Words to drive the SPI module on the ATmega328P
+\ PJ 31-Jan-2016
+-spi-base
+marker -spi-base
+
+\ Registers of interest
+$24 constant ddrb
+$25 constant portb
+$4c constant spcr
+$4d constant spsr
+$4e constant spdr
+
+\ bit masks
+%000100 constant mSS ( PB2 )
+%001000 constant mMOSI ( PB3 )
+%010000 constant mMISO ( PB4 )
+%100000 constant mSCK ( PB5 )
+$80 constant mSPIF
+$40 constant mWCOL
+
+\ !SS is on PB2
+: spi.select ( -- ) mSS portb mclr ;
+: spi.deselect ( -- ) mSS portb mset ;
+
+: spi.init ( -- ) 
+  mSCK ddrb mset \ SCK as output
+  mSCK portb mclr \ clock idles low
+  mMOSI ddrb mset \ MOSI as output
+  mMISO ddrb mclr \ MISO as input
+  mMISO portb mset \ activate pull-up on MISO
+  mSS ddrb mset \ SS as output
+  mSS portb mset \ deselect
+  $51 spcr c! \ enable as master with cpolarity 0, cphase 0, fosc/16
+  $00 spsr c! \ SPI2X=0 for fosc/16
+  spsr c@ drop spdr c@ drop \ will clear SPIF
+;
+: spi.close ( -- )
+  $00 spcr c!
+;
+: spi.wait ( -- ) begin mSPIF spsr mtst until ;
+: spi.cexch ( c1 -- c2 ) spdr c! spi.wait spdr c@ ;
+: spi.csend ( c1 -- ) spi.cexch drop ;
+
+: spi.test ( -- ) 
+  spi.init
+  spi.select
+  $1c spi.csend \ an arbitrary byte
+  spi.deselect
+  spi.close
+;

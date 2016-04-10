@@ -1,0 +1,32 @@
+\ pic24-registers.txt
+
+$2c0 constant trisa
+$2c2 constant porta
+$2c4 constant lata
+$2c6 constant odca
+
+$02c8 constant trisb
+$02ca constant portb
+$02cc constant latb
+$02ce constant odcb
+
+$02d0 constant trisc
+$02d2 constant portc
+$02d4 constant latc
+$02d6 constant odcc
+
+$04e0 constant ansa
+$04e2 constant ansb
+$04e4 constant ansc
+
+$0742 constant osccon
+
+$0770 constant pmd1
+$0772 constant pmd2
+$0774 constant pmd3
+$0776 constant pmd4
+
+$0056 constant cnpd1
+$0062 constant cnen1
+$006e constant cnpu1
+

@@ -1,0 +1,49 @@
+\ registers-pic24.txt
+
+$0056 constant cnpd1
+$0062 constant cnen1
+$006e constant cnpu1
+
+$0084 constant ifs0
+$0086 constant ifs1
+
+$0200 constant i2c1rcv
+$0202 constant i2c1trn
+$0204 constant i2c1brg
+$0206 constant i2c1con
+$0208 constant i2c1stat
+$020a constant i2c1add
+$020c constant i2c1msk
+
+$02c0 constant trisa
+$02c2 constant porta
+$02c4 constant lata
+$02c6 constant odca
+
+$02c8 constant trisb
+$02ca constant portb
+$02cc constant latb
+$02ce constant odcb
+
+$02d0 constant trisc
+$02d2 constant portc
+$02d4 constant latc
+$02d6 constant odcc
+
+$0300 constant adc1buf0
+$0340 constant ad1con1
+$0342 constant ad1con2
+$0344 constant ad1con3
+$0348 constant ad1chs
+
+$04e0 constant ansa
+$04e2 constant ansb
+$04e4 constant ansc
+
+$0742 constant osccon
+
+$0770 constant pmd1
+$0772 constant pmd2
+$0774 constant pmd3
+$0776 constant pmd4
+

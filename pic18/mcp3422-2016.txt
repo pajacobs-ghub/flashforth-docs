@@ -1,0 +1,55 @@
+\ mcp3422-2016.txt
+\ Play with mcp3422 eval board.
+\ PJ, 21-Oct-2013
+\     28-Apr-2014 PIC18F26K22 version
+\     27-Jan-2016 update to use latest i2c words
+\ Needs i2c-base-k22.txt and math.txt (to get m*/).
+
+-mcp3422
+marker -mcp3422
+
+$68 constant addr-mcp3422 \ 7-bit address
+
+: mcp3422-init ( -- )
+  \ $9c is config for 18-bit continuous conversions of ch 1
+  addr-mcp3422 i2c.addr.write if $9c i2c.c! drop then i2c.stop
+;
+
+: mcp3422@ ( -- d f ) \ Read the 18-bit result as 3 bytes
+  addr-mcp3422 i2c.addr.read 
+  if 
+    i2c.c@.ack                         \ only 2 bits in first byte
+    dup $3 > if $fffa or then          \ sign-extend to full cell
+    i2c.c@.ack $8 lshift i2c.c@.ack or \ next two bytes into one cell 
+    swap                               \ leave double result
+    i2c.c@.nack $80 and 0=             \ leave true if result is latest
+  else
+    0 0 0  \ device did not ack on address
+  then
+;
+
+: microvolts ( d1 -- d2 )
+  \ The least-significant bit corresponds to 15.625 microvolts
+  #125 #8 m*/
+;
+
+: (d.3) ( d -- )
+  swap over dabs
+  <# # # # [char] . hold #s rot sign #> 
+;
+
+: report ( d f -- ) \ Assuming decimal, print millivolt value
+  cr if ." new " else ." old " then 
+  microvolts (d.3) type space ." mV "
+;
+
+: mcp3422-run ( -- )
+  decimal
+  i2c.init mcp3422-init 
+  begin
+    mcp3422@ report
+    #1000 ms
+  key? until
+  hex
+;
+

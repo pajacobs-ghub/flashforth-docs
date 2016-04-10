@@ -1,0 +1,25 @@
+-jump-table-ex -jump-table-ex ?
+marker -jump-table-ex  ok<$,ram>
+  ok<$,ram>
+\ Set up the words that we want to selectively execute.  ok<$,ram>
+: ring  ( --) ." ring ring" ;  ok<$,ram>
+: open  ( --) ." opening" ;  ok<$,ram>
+: laugh ( --) ." ha ha" ;  ok<$,ram>
+: cry   ( --) ." crying" ;   ok<$,ram>
+  ok<$,ram>
+\ Store the execution tokens in a table that allots  ok<$,ram>
+\ into flash memory.  ok<$,ram>
+flash  ok<$,flash>
+create actions ' ring , ' open , ' laugh , ' cry ,  ok<$,flash>
+ram  ok<$,ram>
+  ok<$,ram>
+: do-action ( n --) 
+  0 max 3 min 
+  cells actions + @ execute ;  ok<$,ram>
+  ok<$,ram>
+\ Call up the actions.  ok<$,ram>
+3 do-action crying ok<$,ram>
+0 do-action ring ring ok<$,ram>
+2 do-action ha ha ok<$,ram>
+5 do-action crying ok<$,ram>
+

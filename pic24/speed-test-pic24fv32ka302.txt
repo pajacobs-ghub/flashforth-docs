@@ -1,0 +1,57 @@
+-speed-test
+marker -speed-test
+\ For the PIC24FV32KA302, waggle RB15 as quickly as we can, 
+\ in both high- and low-level code.
+\ Remember to load bit.txt before this file.
+
+$02c8 constant trisb
+$02ca constant portb
+$02cc constant latb
+$02ce constant odcb
+
+1 #15 lshift constant bit15
+
+: initRB15
+  bit15 trisb mclr \ RB15 as output
+  bit15 latb mclr \ initially known state
+;
+
+\ high-level bit fiddling, presumably slow
+: blink-forth ( -- )
+  initRB15
+  begin
+    bit15 latb ! 0 latb ! \ one cycle, on and off
+    bit15 latb ! 0 latb !
+    bit15 latb ! 0 latb !
+    bit15 latb ! 0 latb !
+    cwd \ We have to kick the watch dog ourselves.
+  again
+;
+
+\ low-level bit fiddling, via assembler
+: blink-asm ( -- )
+  initRB15
+  [
+  begin,
+    #15 latb bset,  #15 latb bclr, \ one cycle, on and off
+    #15 latb bset,  #15 latb bclr,
+    #15 latb bset,  #15 latb bclr,
+    #15 latb bset,  #15 latb bclr,
+    ] cwd [ \ kick the watch dog
+  again,
+  ]
+;
+
+\ high-level bit fiddling with named bits
+latb #15 bit1: RB15-hi inlined
+latb #15 bit0: RB15-lo inlined
+: blink-bits ( -- )
+  initRB15
+  begin
+    RB15-hi RB15-lo \ one cycle
+    RB15-hi RB15-lo
+    RB15-hi RB15-lo
+    RB15-hi RB15-lo
+    cwd
+  again
+;

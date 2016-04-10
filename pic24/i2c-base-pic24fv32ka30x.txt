@@ -1,0 +1,175 @@
+\ i2c-base-pic24fv32ka30x.txt
+\ Low-level words for I2C master on PIC24FV32KA302 and KA301
+\
+\ Modelled on i2c-base.txt for PIC18, i2c-twi.frt from amforth
+\ the Microchip PIC24 Family Reference Manual 
+\ and the datasheet for PIC24FV32KA304 family.
+\ Peter J.  2015-09-23
+
+-i2c-base
+marker -i2c-base
+hex ram
+
+\ Registers related to I2C operation of MSSP1
+$0086 constant ifs1
+$0200 constant i2c1rcv
+$0202 constant i2c1trn
+$0204 constant i2c1brg
+$0206 constant i2c1con
+$0208 constant i2c1stat
+$020a constant i2c1add
+$020c constant i2c1msk
+$02c8 constant trisb
+$02ca constant portb
+$02cc constant latb
+$02ce constant odcb
+$04e2 constant ansb
+$0770 constant pmd1
+
+\ Masks for bits
+$8000 constant mI2CEN \ in i2c1con
+%000001 constant mSEN
+%000010 constant mRSEN
+%000100 constant mPEN
+%001000 constant mRCEN
+%010000 constant mACKEN
+%100000 constant mACKDT
+$8000 constant mACKSTAT \ in i2c1stat
+$4000 constant mTRSTAT
+$0400 constant mBCL
+$0080 constant mIWCOL
+$0040 constant mI2COV
+%0001 constant mTBF
+%0010 constant mRBF
+%0010 constant mMI2C1IF \ in ifs1
+
+$0100 constant mRB8 \ SCL1 on RB8
+$0200 constant mRB9 \ SDA1 on RB9
+
+: i2c.init ( -- )
+  $80 pmd1 mclr \ Enable the I2C1 module
+  [ Fcy #100 / Fcy #10000 / - 1- ] literal i2c1brg c! \ Set clock to 100 kHz
+  mMI2C1IF ifs1 mclr \ Clear interrupt bit for master operation
+  %1100000000 trisb mset \ SCL1 on RB8, SDA1 on RB9
+  %1100000000 odcb mset
+  mI2CEN i2c1con mset \ Enable hardware
+;
+
+: i2c.close ( -- )
+  mI2CEN i2c1con mclr
+  mMI2C1IF ifs1 mclr
+;
+
+: i2c.bus.reset ( -- )
+  \ Manually reset the slave devices.
+  \ For use when a slave just won't let SDA1 go.
+  i2c.close
+  mRB9 trisb mset \ leave SDA1 float
+  mRB9 odcb mset
+  mRB8 trisb mclr \ drive SCL1 with digital output
+  mRB8 odcb mset
+  9 for 
+    mRB8 latb mclr 1 ms
+    mRB8 latb mset 1 ms
+  next
+  \ stop condition
+  mRB8 latb mclr
+  mRB9 trisb mclr
+  mRB9 latb mclr 1 ms
+  mRB8 latb mset
+  mRB9 latb mset 1 ms 
+  \ release bus
+  mRB8 trisb mset
+  mRB9 trisb mset
+;
+
+: i2c.wait ( -- ) \ Wait for interrupt flag and clear it
+  begin mMI2C1IF ifs1 mtst until
+  mMI2C1IF ifs1 mclr
+;
+
+: i2c.idle? ( -- f )
+  %00011111 i2c1con mtst \ ACKEN RCEN REN RSEN SEN
+  0=
+;
+
+: i2c.start ( -- ) \ Send start condition
+  begin i2c.idle? until
+  mMI2C1IF ifs1 mclr
+  mSEN i2c1con mset
+  i2c.wait
+;
+
+: i2c.rsen ( -- ) \ Send repeated start condition
+  mMI2C1IF ifs1 mclr
+  mRSEN i2c1con mset
+  i2c.wait
+;
+
+: i2c.stop ( -- ) \ Send stop condition
+  mMI2C1IF ifs1 mclr
+  mPEN i2c1con mset
+  i2c.wait
+;
+
+: i2c.tbuf.full? ( -- f ) 
+  mTBF i2c1stat mtst
+;
+
+: i2c.rbuf.full? ( -- f ) 
+  mRBF i2c1stat mtst
+;
+
+\ Write one byte to bus, leaves ACK bit.
+\ A value of 0 indicates ACK was received from slave device.
+: i2c.c! ( c -- f )
+  begin i2c.tbuf.full? 0= until
+  mMI2C1IF ifs1 mclr
+  i2c1trn c!
+  \ We wait for the interrupt because just waiting for the buffer
+  \ to be empty is unreliable if we look too soon.
+  i2c.wait
+  begin i2c.idle? until
+  i2c1stat @ mACKSTAT and
+;
+
+\ Send ack bit.
+: i2c.ack.seq ( -- )
+  mACKEN i2c1con mset
+  begin mACKEN i2c1con mtst 0= until
+;
+
+\ Read one byte and ack for another.
+: i2c.c@.ack ( -- c )
+  mRCEN i2c1con mset
+  begin i2c.rbuf.full? until
+  mACKDT i2c1con mclr i2c.ack.seq \ ack
+  i2c1rcv c@
+;
+
+ \ Read one last byte.
+: i2c.c@.nack ( -- c ) 
+  mRCEN i2c1con mset
+  begin i2c.rbuf.full? until
+  mACKDT i2c1con mset i2c.ack.seq \ nack
+  i2c1rcv c@
+;
+
+\ Address slave for writing, leaves true if slave ready.
+: i2c.addr.write ( 7-bit-addr -- f )
+  1 lshift 1 invert and \ Build full byte with write-bit as 0
+  i2c.start i2c.c! 0=
+;
+
+\ Address slave for reading, leaves true if slave ready.
+: i2c.addr.read ( 7-bit-addr -- f )
+  1 lshift 1 or \ Build full byte with read-bit as 1
+  i2c.start i2c.c! 0=
+;
+
+\ Detect presence of device, 
+\ leaving true if device present, 0 otherwise.
+\ We actually fetch a byte if the slave has acknowledged. 
+: i2c.ping? ( 7-bit-addr -- f )
+  i2c.addr.read if i2c.c@.nack drop true else false then
+;

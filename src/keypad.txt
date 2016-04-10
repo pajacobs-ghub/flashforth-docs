@@ -1,0 +1,71 @@
+-keypad
+marker -keypad
+\ Display key presses from a 4x3 (telephone-like) keypad 
+
+$ff81 con portb
+$ff8a con latb
+$ff93 con trisb
+$ffc1 con adcon1
+$fff1 con intcon2
+
+: init ( -- )
+  0 latb c!
+  %00001111 adcon1 c! \ set as all digital I/O pins
+  %11110000 trisb c! \ RB7-4 as input, RB3-0 as output
+  %10000000 intcon2 mclr \ turn on pull-ups
+;
+
+flash 
+create key_chars 
+  char 1 c, char 2 c, char 3 c,
+  char 4 c, char 5 c, char 6 c,
+  char 7 c, char 8 c, char 9 c,
+  char * c, char 0 c, char # c,
+create key_scan_bytes
+  $7e c, $7d c, $7b c,
+  $be c, $bd c, $bb c,
+  $de c, $dd c, $db c,
+  $ee c, $ed c, $eb c,
+ram
+
+: scan_keys ( -- c )
+  \ Return ASCII code of key that is pressed
+  #12 for
+    key_scan_bytes r@ + c@ 
+    dup
+    latb c!
+    portb c@
+    = if 
+      \ key must be pressed to get a match
+      key_chars r@ + c@
+      rdrop
+      exit
+    then
+  next
+  0  \ no key was pressed
+;
+
+: keypad@ ( -- c ) 
+  \ Read keypad with simple debounce.
+  \ ASCII code is left on stack. 
+  \ Zero is returned for no key pressed or inconsistent scans.
+  scan_keys dup 
+  #20 ms 
+  scan_keys
+  = if exit else drop then
+  0 \ inconsistent scan results
+;
+         
+: main ( -- )
+  init
+  begin
+    keypad@
+    dup 
+    0= if 
+      drop  \ no key pressed 
+    else
+      emit  
+      #300 ms \ don't repeat key too quickly
+    then 
+  again
+;

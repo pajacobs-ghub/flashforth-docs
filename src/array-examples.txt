@@ -1,0 +1,26 @@
+-array-examples
+marker -array-examples
+ram
+decimal
+
+\ Create an array, fill it with ones and 
+\ display the content of the first element.
+create my-array 10 allot
+my-array 10 $ff fill
+my-array @ . 
+
+\ Create a second array with specific values
+\ and display the content of the third element.
+create my-cell-array 100 , 340 , 5 ,
+my-cell-array 2 cells + @ .
+
+\ A defining word for creating arrays.
+: mk-cell-array ( u --)
+  create cells allot
+  does> swap cells + ;
+\ Make an array and access it.
+5 mk-cell-array my-cells
+3000 0 my-cells !
+3001 1 my-cells !
+3002 2 my-cells !
+1 my-cells @ .

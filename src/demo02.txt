@@ -1,0 +1,40 @@
+-demo02
+marker -demo02
+\ Read and report the analog value on RA0/AN0.
+\ The PICDEM 2 Plus has a potentiometer attached to RA0.
+
+$ffc4 con adresh
+$ffc3 con adresl
+$ffc2 con adcon0
+$ffc1 con adcon1
+$ffc0 con adcon2
+$ff92 con trisa
+
+: init ( -- )
+  1 trisa mset \ want RA0 as input
+  %00001110 adcon1 c! \ RA0 is AN0
+  %10111111 adcon2 c! \ right-justified result, long acquisition time
+  %00000001 adcon0 c! \ Power on ADC, looking at AN0
+;
+
+: adc@ ( -- u ) 
+  %10 adcon0 mset \ Start conversion
+  begin %10 adcon0 mtst 0= until \ Wait until DONE
+  adresl @
+;
+ 
+: wait ( -- )
+  #500 ms
+;
+
+: main ( -- )
+  init 
+  begin
+    adc@ u.
+    wait
+  again
+;
+
+\ Exercise the application, writing digitized values periodically.
+decimal
+main 

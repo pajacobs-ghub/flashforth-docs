@@ -1,0 +1,24 @@
+-jump-table-ex2
+marker -jump-table-ex2
+
+\ Set up the words that we want to selectively execute.
+: ring  ( --) ." ring ring" ;
+: open  ( --) ." opening" ;
+: laugh ( --) ." ha ha" ;
+: cry   ( --) ." crying" ; 
+
+\ Build the jump-table.
+flash
+JUMP_TABLE do-action-2
+  0 | ring
+  1 | open
+  2 | laugh
+  3 | cry
+  default| cry
+ram
+
+\ Call up the actions.
+3 do-action-2
+0 do-action-2
+2 do-action-2
+5 do-action-2

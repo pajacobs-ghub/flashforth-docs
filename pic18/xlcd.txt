@@ -1,0 +1,158 @@
+\ Exercise LCD on PICDEM2+ board.
+\ Remember to load bit.txt before this file.
+-xlcd
+marker -xlcd
+
+$ff80 constant porta
+$ff89 constant lata
+$ff92 constant trisa
+$ff83 constant portd
+$ff8c constant latd
+$ff95 constant trisd
+
+\ The LCD is operated in nibble mode.
+\ RA1 = Enable (E) pin
+\ RA2 = Read/Write (RW) pin
+\ RA3 = Register Select (RS) pin
+\ RD0 = DB4 on LCD
+\ RD1 = DB5
+\ RD2 = DB6
+\ RD3 = DB7
+
+portd constant dataport
+lata #1 bit0: Elo
+lata #1 bit1: Ehi
+lata #2 bit0: RWlo
+lata #2 bit1: RWhi
+lata #3 bit0: RSlo
+lata #3 bit1: RShi
+
+: data-port-in ( -- )
+  trisd c@ $0f or trisd c!
+;
+
+: data-port-out ( -- )
+  trisd c@ $f0 and trisd c!
+;
+
+: put-nibble ( c -- )
+  \ Make lower 4 bits of c appear on data port pins.
+  $0f and
+  dataport c@ $f0 and
+  or 
+  dataport c!
+;
+
+: short-delay ( -- ) 
+  18 for r@ drop next ;
+
+: Estrobe ( -- )
+  Ehi short-delay Elo 
+;
+
+: lcd-getc ( -- c )
+  \ Read the LCD register in two nibbles.
+  \ Remember to select the register line before calling this word.
+  data-port-in
+  RWhi short-delay
+  Ehi short-delay dataport c@ #4 lshift Elo short-delay \ high nibble
+  Ehi short-delay dataport c@ Elo short-delay \ low nibble
+  or \ assemble full byte and leave it on the stack
+  RWlo short-delay
+;
+
+: lcd-ready? ( -- f )
+  \ Read the command register and check busy bit.
+  RSlo short-delay 
+  lcd-getc $80 and 0=
+;
+
+: wait-for-lcd ( -- )
+  begin lcd-ready? cwd until
+;
+
+: lcd-putc ( c -- ) 
+  \ Write the LCD register in two nibbles.
+  \ Remember to select the register line before calling this word.
+  dup $f0 and #4 rshift \ high nibble left on top of stack
+  data-port-out
+  RWlo short-delay
+  put-nibble short-delay Estrobe short-delay
+  $0f and \ low nibble now left on top of stack
+  put-nibble short-delay Estrobe short-delay
+  data-port-in
+;
+
+: lcd-clear ( -- )
+  wait-for-lcd 
+  RSlo short-delay 
+  %00000001 lcd-putc
+;
+
+: lcd-home ( -- )
+  wait-for-lcd
+  RSlo short-delay 
+  %00000010 lcd-putc
+;
+
+: lcd-goto ( c -- )
+  \ Set the specified 7-bit data memory address.
+  wait-for-lcd
+  RSlo short-delay 
+  $80 or \ sets the highest bit for the command
+  lcd-putc
+;
+  
+: lcd-init ( -- )
+  data-port-in
+  Elo RWlo RSlo
+  %00001110 trisa mclr \ RS, RW and E as output
+  30 ms \ power-on delay
+  \ Begin "initialization by instruction"
+  \ Presumably, the LCD is in 8-bit interface mode.
+  %0011 put-nibble Estrobe 5 ms
+  %0011 put-nibble Estrobe 1 ms
+  %0011 put-nibble Estrobe 1 ms
+  \ Function set for 4-bit interface; it is still in 8-bit mode.
+  %0010 put-nibble Estrobe 1 ms
+  \ Now, we should be in 4-bit interface mode.
+  \ Function set for 4-bit interface, 2 display lines 5x7 font.
+  wait-for-lcd
+  %00101000 lcd-putc
+  \ Increment cursor after each byte, don't shift display.
+  wait-for-lcd
+  %00000110 lcd-putc
+  \ Display off
+  wait-for-lcd
+  %00001000 lcd-putc
+  \ Display clear
+  %00000001 lcd-putc
+  5 ms
+  \ End of "initialization by instruction"
+  \ Enable cursor and display, no blink.
+  wait-for-lcd
+  %00001110 lcd-putc 1 ms
+  wait-for-lcd
+;
+
+: lcd-emit ( c -- ) \ Write the byte into data memory.
+  wait-for-lcd
+  RShi short-delay 
+  lcd-putc
+;
+
+: lcd-type ( c-addr n -- ) \ send string
+  for c@+ lcd-emit next
+  drop 
+; 
+
+: main
+  ." Begin..."
+  lcd-init
+  cr ." lcd-init done."
+  s" Hello from" lcd-type
+  $40 lcd-goto
+  s" FlashForth 5.0" lcd-type
+  cr ." exercise done."
+;
+

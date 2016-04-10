@@ -1,0 +1,43 @@
+-read-adc
+marker -read-adc
+\ Read and report the analog value on RA0/AN0.
+
+\ Registers of interest on the PIC18F26K22
+$ffc4 constant adresh
+$ffc3 constant adresl
+$ffc2 constant adcon0
+$ffc1 constant adcon1
+$ffc0 constant adcon2
+$ff92 constant trisa
+$ff38 constant ansela
+
+: init ( -- )
+  1 trisa mset \ want RA0 as input
+  1 ansela mset
+  %00000000 adcon1 c! \ ADC references Vdd, Vss
+  %10101111 adcon2 c! \ right-justified, 12-TAD acq-time, FRC
+  %00000001 adcon0 c! \ Power on ADC, looking at AN0
+;
+
+: adc@ ( -- u ) 
+  %10 adcon0 mset \ Start conversion
+  begin %10 adcon0 mtst 0= until \ Wait until DONE
+  adresl @
+;
+ 
+: wait ( -- )
+  #500 ms
+;
+
+: main ( -- )
+  init 
+  begin
+    adc@ u.
+    wait
+  key? until
+;
+
+\ Exercise the application, writing digitized values periodically
+\ until any key is pressed.
+decimal
+main 

@@ -1,0 +1,24 @@
+\ Try named bits on the PICDEM2+ board.
+\ LED on RB3 shows state of switch on RB0.
+\
+\ Remember to load bit.txt before this file.
+
+-bit-test
+marker -bit-test
+
+$ff81 constant portb
+$ff8a constant latb
+$ff93 constant trisb
+
+trisb #3 bit0: rb3out inlined
+trisb #0 bit1: rb0in inlined
+latb #3 bit1: rb3hi inlined
+latb #3 bit0: rb3lo inlined
+portb #0 bit?: rb0?
+
+: main
+  rb0in rb3out
+  begin
+    rb0? if rb3lo else rb3hi then
+  key? until ;
+

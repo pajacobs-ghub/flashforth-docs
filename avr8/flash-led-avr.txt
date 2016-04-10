@@ -1,0 +1,14 @@
+-flash-led-avr
+marker -flash-led-avr
+\ PB5 is Arduino digital pin 13.
+\ There is a LED attached to this pin on the Freetronics Eleven.
+ 
+$0024 constant ddrb
+$0025 constant portb
+1 #5 lshift constant bit5
+
+: init bit5 ddrb mset ; \ set pin as output
+: do_output portb c@ bit5 xor portb c! ; \ toggle the bit
+: main init begin do_output #500 ms again ;
+
+main

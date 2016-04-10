@@ -1,0 +1,30 @@
+-demo01 -demo01 ?
+marker -demo01  ok<$,ram>
+\ Flash a LED attached to pin RB0.  ok<$,ram>
+  ok<$,ram>
+$ff8a con latb  ok<$,ram>
+$ff93 con trisb  ok<$,ram>
+variable ms_count \ use this for setting wait period.  ok<$,ram>
+  ok<$,ram>
+: init ( -- ) 
+  1 trisb mclr  \ want RB0 as output 
+;  ok<$,ram>
+  ok<$,ram>
+: do_output ( -- ) 
+  latb c@ 1 xor latb c!  \ toggle RB0 
+;   ok<$,ram>
+  ok<$,ram>
+: wait ( -- ) 
+  ms_count @ ms 
+;  ok<$,ram>
+  ok<$,ram>
+: main ( n -- ) 
+  ms_count !  \ store for later use in wait 
+  init 
+  begin 
+    do_output 
+    wait 
+  again 
+;  ok<$,ram>
+  ok<$,ram>
+500 main  \ exercise the application 

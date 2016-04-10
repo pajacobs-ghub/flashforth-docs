@@ -1,0 +1,53 @@
+-speed-test
+marker -speed-test
+\ Waggle RB1 as quickly as we can, in both high- and low-level code.
+\ Before sending this file, we should send asm.txt so that we have
+\ the clrwdt, word available.  We also need bit.txt.
+
+$ff8a constant latb
+$ff93 constant trisb
+
+: initRB1
+  %10 trisb mclr \ RB1 as output
+  %10 latb mclr \ initially known state
+;
+
+\ high-level bit fiddling, presumably slow
+: blink-forth ( -- )
+  initRB1
+  begin
+    %10 latb c! 0 latb c! \ one cycle, on and off
+    %10 latb c! 0 latb c!
+    %10 latb c! 0 latb c!
+    %10 latb c! 0 latb c!
+    cwd \ We have to kick the watch dog ourselves.
+  again
+;
+
+\ low-level bit fiddling, via assembler
+: blink-asm ( -- )
+  initRB1
+  [
+  begin,
+    latb 1 a, bsf,  latb 1 a, bcf, \ one cycle, on and off
+    latb 1 a, bsf,  latb 1 a, bcf,
+    latb 1 a, bsf,  latb 1 a, bcf,
+    latb 1 a, bsf,  latb 1 a, bcf,
+    clrwdt, \ kick the watch dog
+  again,
+  ]
+;
+
+\ high-level bit fiddling with named bits
+latb #1 bit1: RB1-hi inlined
+latb #1 bit0: RB1-lo inlined
+: blink-bits ( -- )
+  initRB1
+  begin
+    RB1-hi RB1-lo \ one cycle
+    RB1-hi RB1-lo
+    RB1-hi RB1-lo
+    RB1-hi RB1-lo
+    cwd
+  again
+;

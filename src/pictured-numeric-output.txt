@@ -1,0 +1,9 @@
+-numeric
+marker -numeric
+
+: (d.2) ( d -- caddr u)
+  tuck dabs <# # # [char] . hold #s rot sign #> ;
+
+437658. (d.2) type
+-437699. (d.2) type
+45. (d.2) type

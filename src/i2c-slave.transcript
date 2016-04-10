@@ -1,0 +1,252 @@
+\ *********************************************************************  ok<$,ram>
+\                                                                     *  ok<$,ram>
+\    Filename:      core.txt                                          *  ok<$,ram>
+\    Date:          14.2.2011                                         *  ok<$,ram>
+\    FF Version:    3.7                                               *  ok<$,ram>
+\    Copyright:     Mikael Nordman                                    *  ok<$,ram>
+\    Author:        Mikael Nordman                                    *  ok<$,ram>
+\ *********************************************************************  ok<$,ram>
+\    FlashForth is licensed acording to the GNU General Public License*  ok<$,ram>
+\ *********************************************************************  ok<$,ram>
+\ Some extra core words  ok<$,ram>
+  ok<$,ram>
+-core -core ?
+marker -core  ok<$,ram>
+hex ram  ok<$,ram>
+  ok<$,ram>
+\ Interpret a string. The string must be in ram  ok<$,ram>
+: evaluate ( caddr n -- ) 
+  'source 2@ >r >r >in @ >r 
+  interpret 
+  r> >in ! r> r> 'source 2! 
+;  ok<$,ram>
+  ok<$,ram>
+: forget ( --- name ) 
+  bl word latest @ (f) abort" ?" 
+  c>n 2- dup @ abort" ?" 
+  dup flash dp ! @ latest ! ram 
+;  ok<$,ram>
+  ok<$,ram>
+ ( addr n c -- ) \ fill addr to addr+n with c  ok<$,ram>
+: fill rot !p>r swap for dup pc! p+ next r>p drop ;  ok<$,ram>
+  ok<$,ram>
+\  addr n --  ok<$,ram>
+: erase  0 fill ;  ok<$,ram>
+  ok<$,ram>
+\ addr n --  ok<$,ram>
+: blanks bl fill ;  ok<$,ram>
+  ok<$,ram>
+\ x -- 0 | x x  ok<$,ram>
+: ?dup dup if inline dup then ;  ok<$,ram>
+  ok<$,ram>
+\ xu ... x0 u -- xu ... x0 xu  ok<$,ram>
+: pick 2* 3 + sp@ swap - @ ;  ok<$,ram>
+  ok<$,ram>
+\ nfa -- flag  ok<$,ram>
+: in? c@ $40 and ;  ok<$,ram>
+  ok<$,ram>
+\ addr -- addr+1 n   ok<$,ram>
+: count c@+ ;  ok<$,ram>
+  ok<$,ram>
+hex ram  ok<$,ram>
+  ok<$,ram>
+-i2c-slave -i2c-slave ?
+marker -i2c-slave  ok<$,ram>
+\ Make the FlashForth demo board into an I2C slave.  ok<$,ram>
+\ An I2C master can read and write to a buffer here,  ok<$,ram>
+\ the least-significant bit of the first byte controls  ok<$,ram>
+\ the LED attached to pin RB0.  ok<$,ram>
+  ok<$,ram>
+$ff81 con portb  ok<$,ram>
+$ff82 con portc  ok<$,ram>
+$ff8a con latb  ok<$,ram>
+$ff93 con trisb  ok<$,ram>
+$ff94 con trisc  ok<$,ram>
+  ok<$,ram>
+: led_on ( -- ) 
+  %00000001 latb mset 
+;  ok<$,ram>
+: led_off ( -- ) 
+  %00000001 latb mclr 
+;  ok<$,ram>
+: err_led_on ( -- ) 
+  %00000010 latb mset 
+;  ok<$,ram>
+: err_led_off ( -- ) 
+  %00000010 latb mclr 
+;  ok<$,ram>
+  ok<$,ram>
+\ Establish a couple of buffers in RAM, together with index variables.  ok<$,ram>
+ram  ok<$,ram>
+8 con buflen  ok<$,ram>
+\ Receive buffer for incoming I2C data.  ok<$,ram>
+create rbuf buflen allot  ok<$,ram>
+variable rindx  ok<$,ram>
+: init_rbuf ( -- ) 
+  rbuf buflen erase 
+  0 rindx ! 
+;  ok<$,ram>
+: incr_rindx ( -- ) \ increment with wrap-around 
+  rindx @ 1 +  
+  dup buflen = if drop 0 then 
+  rindx ! 
+;  ok<$,ram>
+: save_to_rbuf ( c -- ) 
+  rbuf rindx @ + c! 
+  incr_rindx 
+;  ok<$,ram>
+  ok<$,ram>
+\ Send buffer with something interesting for the I2C master to read.   ok<$,ram>
+create sbuf buflen allot  ok<$,ram>
+variable sindx  ok<$,ram>
+: incr_sindx ( -- ) \ increment with wrap-around 
+  sindx @ 1 +  
+  dup buflen = if drop 0 then 
+  sindx ! 
+;  ok<$,ram>
+: init_sbuf ( -- ) \ fill with counting integers, for interest 
+  buflen 
+  for 
+    r@ 1+ 
+    sbuf r@ + c! 
+  next 
+  0 sindx ! 
+;  ok<$,ram>
+  ok<$,ram>
+\ I2C-related definitions and code  ok<$,ram>
+$ffc5 con sspcon2  ok<$,ram>
+$ffc6 con sspcon1  ok<$,ram>
+$ffc7 con sspstat  ok<$,ram>
+$ffc8 con sspadd  ok<$,ram>
+$ffc9 con sspbuf  ok<$,ram>
+$ff9e con pir1  ok<$,ram>
+  ok<$,ram>
+\ PIR1 bits  ok<$,ram>
+%00001000 con sspif  ok<$,ram>
+  ok<$,ram>
+\ SSPSTAT bits  ok<$,ram>
+%00000001 con bf  ok<$,ram>
+%00000100 con r_nw  ok<$,ram>
+%00001000 con start_bit  ok<$,ram>
+%00010000 con stop_bit  ok<$,ram>
+%00100000 con d_na  ok<$,ram>
+%01000000 con cke  ok<$,ram>
+%10000000 con smp  ok<$,ram>
+  ok<$,ram>
+d_na start_bit or r_nw or bf or con stat_mask  ok<$,ram>
+  ok<$,ram>
+\ SSPCON1 bits  ok<$,ram>
+%00010000 con ckp  ok<$,ram>
+%00100000 con sspen  ok<$,ram>
+%01000000 con sspov  ok<$,ram>
+%10000000 con wcol  ok<$,ram>
+  ok<$,ram>
+\ SSPCON2 bits  ok<$,ram>
+%00000001 con sen  ok<$,ram>
+  ok<$,ram>
+: i2c_init ( -- ) 
+  %00011000 trisc mset \ RC3==SCL RC4==SDA 
+  %00000110 sspcon1 c! \ Slave mode with 7-bit address 
+  sen sspcon2 mset \ Clock stretching enabled 
+  smp sspstat mset \ Slew-rate disabled 
+  $52 1 lshift sspadd c! \ Slave address 
+  sspen sspcon1 mset \ Enable MSSP peripheral 
+;  ok<$,ram>
+  ok<$,ram>
+: release_clock ( -- ) 
+  ckp sspcon1 mset 
+;  ok<$,ram>
+  ok<$,ram>
+: i2c_service ( -- ) 
+  \ Check the state of the I2C peripheral and react. 
+  \ See App Note 734 for an explanation of the 5 states. 
+  \  
+  \ State 1: i2c write operation, last byte was address. 
+  \ D_nA=0, S=1, R_nW=0, BF=1 
+  sspstat c@ stat_mask and %00001001 = 
+  if 
+    sspbuf @ drop 
+    init_rbuf 
+    release_clock 
+    exit 
+  then 
+  \ State 2: i2c write operation, last byte was data. 
+  \ D_nA=1, S=1, R_nW=0, BF=1 
+  sspstat c@ stat_mask and %00101001 = 
+  if 
+    sspbuf c@ save_to_rbuf 
+    release_clock 
+    exit 
+  then 
+  \ State 3: i2c read operation, last byte was address. 
+  \ D_nA=0, S=1, R_nW=1 
+  sspstat c@ %00101100 and %00001100 = 
+  if 
+    sspbuf c@ drop 
+    0 sindx ! 
+    wcol sspcon1 mclr 
+    sbuf sindx @ + c@ sspbuf c! 
+    release_clock 
+    incr_sindx 
+    exit 
+  then 
+  \ State 4: i2c read operation, last byte was outgoing data. 
+  \ D_nA=1, S=1, R_nW=1, BF=0 
+  sspstat c@ stat_mask and %00101100 = 
+  ckp sspcon1 mtst 0= 
+  and 
+  if 
+    wcol sspcon1 mclr 
+    sbuf sindx @ + c@ sspbuf c! 
+    release_clock 
+    incr_sindx 
+    exit 
+  then 
+  \ State 5: master NACK, slave i2c logic reset. 
+  \ From AN734: D_nA=1, S=1, BF=0, CKP=1, however, 
+  \ we use just D_nA=1 and CKP=1, ignoring START bit. 
+  \ This is because master may have already asserted STOP 
+  \ before we service the final NACK on a read operation. 
+  d_na sspstat mtst 0 > ckp sspcon1 mtst 0 > and 
+  stop_bit sspstat mtst or 
+  if 
+    exit \ Nothing needs to be done. 
+  then 
+  \ We shouldn't arrive here... 
+  err_led_on 
+  cr ." Error " 
+  ." sspstat " sspstat c@ u. 
+  ." sspcon1 " sspcon1 c@ u. 
+  ." sspcon2 " sspcon2 c@ u. 
+  cr 
+  begin again \ Hang around until watch-dog resets MCU. 
+;  ok<$,ram>
+  ok<$,ram>
+  ok<$,ram>
+: init ( -- ) 
+  %00000011 trisb mclr  \ want RB0,RB1 as output pins 
+  init_rbuf 
+  init_sbuf 
+  i2c_init 
+  led_on err_led_on #200 ms led_off err_led_off 
+;  ok<$,ram>
+  ok<$,ram>
+: main ( n -- ) 
+  cr ." Start I2C slave " 
+  init 
+  begin 
+    sspif pir1 mtst  
+    if 
+      sspif pir1 mclr  
+      i2c_service 
+    then 
+    rbuf c@ %00000001 and 
+    if led_on else led_off then 
+    cwd 
+  again 
+;  ok<$,ram>
+  ok<$,ram>
+\ ' main is turnkey  ok<$,ram>
+main 
+Start I2C slave 
+

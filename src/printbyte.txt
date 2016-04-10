@@ -1,0 +1,4 @@
+: c?%  ( addr -- )  \ print byte contents at addr in binary
+  base @ swap
+  2 spaces c@ 8 bin u.r
+  base !  ;

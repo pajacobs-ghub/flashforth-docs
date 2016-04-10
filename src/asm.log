@@ -1,0 +1,167 @@
+\ *********************************************************************  ok<$,ram>
+\    Assembler for FlashForth                                         *  ok<$,ram>
+\    Filename:      asm.txt                                           *  ok<$,ram>
+\    Date:          14.2.2010                                         *  ok<$,ram>
+\    FF Version:    3.4                                               *  ok<$,ram>
+\    Copyright:     Mikael Nordman                                    *  ok<$,ram>
+\    Author:        Mikael Nordman                                    *  ok<$,ram>
+\ *********************************************************************  ok<$,ram>
+\    FlashForth is licensed acording to the GNU General Public License*  ok<$,ram>
+\ *********************************************************************  ok<$,ram>
+\ 1.10.2007  Totally rewritten as more normal Forth prefix assembler  ok<$,ram>
+\ The structured assembler is in the FlashForth core,  ok<$,ram>
+\ so normal conditionals are commented away.  ok<$,ram>
+\   ok<$,ram>
+\ If you are short of memory, just compile  ok<$,ram>
+\ the assembler parts you really need.  ok<$,ram>
+  ok<$,ram>
+\ Since FlashForth refuses to redefine words,  ok<$,ram>
+\ oneline definitions may safely be copied to the  ok<$,ram>
+\ file that uses the assembler defintions. See i2c.fth for example.  ok<$,ram>
+  ok<$,ram>
+-as  ok<$,ram>
+marker -as  ok<$,ram>
+hex ram  ok<$,ram>
+  ok<$,ram>
+\ microchip assembler arguments  ok<$,ram>
+\ f = file  ok<$,ram>
+\ d = destination  ok<$,ram>
+\ a = access  ok<$,ram>
+\ b = bit  ok<$,ram>
+\ k = literal  ok<$,ram>
+  ok<$,ram>
+0 con w,     \ Destination W register  ?
+1 con f,     \ Destination File  ok<$,ram>
+0 con a,     \ Force Access Bank  ?
+1 con b,     \ Force Bank Select Register  ok<$,ram>
+  ok<$,ram>
+\ registers for parameter stack handling  ok<$,ram>
+$0000 con Sreg     \ For lfsr  ok<$,ram>
+$ffed con Sminus  ok<$,ram>
+$ffec con plusS  ok<$,ram>
+  ok<$,ram>
+\ Temporary pointer  ok<$,ram>
+$0001 con Treg     \ For lfsr  ok<$,ram>
+$ffe5 con Tminus  ok<$,ram>
+$ffe4 cons plusT cons ?
+  ok<$,ram>
+: as0 ( opcode "name" -- ) ( -- ) 
+  constant 
+  does> i, ;  ok<$,ram>
+  ok<$,ram>
+: as2 ( opcode "name" -- ) ( f a -- ) 
+  constant 
+  does> rot ic, or ic, ;  ok<$,ram>
+  ok<$,ram>
+\ Not needed for structured conditionals  ok<$,ram>
+\ : br1 ( opcode "name" -- ) ( rel-addr -- ) \ bcc  ok<$,ram>
+\   constant  ok<$,ram>
+\   does> swap $1ff br? or i, ;  ok<$,ram>
+  ok<$,ram>
+$24 as3 addwf,          ( f d a -- )    ok<$,ram>
+$20 as3 addwfc,         ( f d a -- )    ok<$,ram>
+$14 as3 andwf,          ( f d a -- )    ok<$,ram>
+$6a as2 clrf,           ( f a -- )    ok<$,ram>
+$1c as3 comf,           ( f d a -- )    ok<$,ram>
+$62 as2 cpfseq,         ( f a -- )    ok<$,ram>
+$64 as2 cpfsgt,         ( f a -- )    ok<$,ram>
+$60 as2 cpfslt,         ( f a -- )    ok<$,ram>
+$04 as3 decf,           ( f d a -- )    ok<$,ram>
+$2c as3 decfsz,         ( f d a -- )    ok<$,ram>
+$4c as3 dcfsnz,         ( f d a -- )    ok<$,ram>
+$28 as3 incf,           ( f d a -- )    ok<$,ram>
+$3c as3 incfsz,         ( f d a -- )    ok<$,ram>
+$48 as3 infsnz,         ( f d a -- )    ok<$,ram>
+$10 as3 iorwf,          ( f d a -- )    ok<$,ram>
+$50 as3 movf,           ( f d a -- )    ?
+: movff,                ( fs fd -- ) 
+  swap $0fff and $c000 or i, $0fff and $f000 or i, ;      ok<$,ram>
+$6e as2 movwf,          ( f a -- )      ok<$,ram>
+$02 as2 mulwf,          ( f a -- )      ok<$,ram>
+$6c as2 negf,           ( f a -- )      ok<$,ram>
+$34 as3 rlcf,           ( f d a -- )    ok<$,ram>
+$44 as3 rlncf,          ( f d a -- )    ok<$,ram>
+$30 as3 rrcf,           ( f d a -- )    ok<$,ram>
+$40 as3 rrncf,          ( f d a -- )    ok<$,ram>
+$68 as2 setf,           ( f d a -- )    ok<$,ram>
+$54 as3 subfwb,         ( f d a -- )    ok<$,ram>
+$5c as3 subwf,          ( f d a -- )    ok<$,ram>
+$58 as3 subwfb,         ( f d a -- )    ok<$,ram>
+$38 as3 swapf,          ( f d a -- )    ok<$,ram>
+$66 as2 tstfsz,         ( f a -- )      ok<$,ram>
+$18 as3 xorwf,          ( f d a -- )    ok<$,ram>
+  ok<$,ram>
+\ **************************************  ok<$,ram>
+\ bit-oriented file register operations  ok<$,ram>
+\ **************************************  ok<$,ram>
+$90 as3 bcf,            ( f b a -- )    ?
+$80 as3 bsf,            ( f b a -- )    ?
+$b0 as3 btfsc,          ( f b a -- )    ?
+$a0 as3 btfss,          ( f b a -- )    ?
+$70 as3 btg,            ( f b a -- )    ok<$,ram>
+\ **************************************  ok<$,ram>
+\ literal operations   ok<$,ram>
+\ **************************************  ok<$,ram>
+$0f00 as1 addlw,        ( k -- )    ok<$,ram>
+$0d00 as1 andlw,        ( k -- )    ?
+$0900 as1 iorlw,        ( k -- )    ok<$,ram>
+: lfsr,    ( k f -- ) 
+  4 lshift over 8 rshift $f and or $ee00 or i, $ff and $f000 or i, ;    ok<$,ram>
+$0100 as1 movlb,        ( k -- )    ok<$,ram>
+$0e00 as1 movlw,        ( k -- )    ok<$,ram>
+$0d00 as1 mullw,        ( k -- )    ok<$,ram>
+$0800 as1 sublw,        ( k -- )    ok<$,ram>
+$0a00 as1 xorlw,        ( k -- )  ok<$,ram>
+  ok<$,ram>
+\ **************************************  ok<$,ram>
+\ control operations  ok<$,ram>
+\ **************************************  ok<$,ram>
+\ NOT needed, use structured conditonals instead  ok<$,ram>
+\ $e200 br1 bc,         ( n -- )    ok<$,ram>
+\ $e600 br1 bn,         ( n -- )    ok<$,ram>
+\ $e300 br1 bnc,        ( n -- )    ok<$,ram>
+\ $e700 br1 bnn,        ( n -- )    ok<$,ram>
+\ $e500 br1 bnov,       ( n -- )    ok<$,ram>
+\ $e000 br1 bz,         ( n -- )    ok<$,ram>
+\ $e100 br1 bnz,        ( n -- )    ok<$,ram>
+\ $e400 br1 bov,        ( n -- )    ok<$,ram>
+  ok<$,ram>
+$d000 br2 bra,          ( n -- )    ?
+$ec00 br3 call,         ( n -- )    ?
+$0004 as0 clrwdt,       ( -- )      ok<$,ram>
+$0007 as0 daw,          ( -- )      ok<$,ram>
+$ef00 br3 goto,         ( n -- )    ?
+$0006 as0 pop,          ( -- )      ok<$,ram>
+$0005 as0 push,         ( -- )      ok<$,ram>
+$d800 br2 rcall,        ( n -- )    ?
+$00ff as0 reset,        ( -- )      ok<$,ram>
+$0010 as0 retfie,       ( -- )      ok<$,ram>
+$0c00 as1 retlw,        ( k -- )    ok<$,ram>
+$0012 as0 return,       ( -- )      ok<$,ram>
+$0003 as0 sleep,        ( -- )      ok<$,ram>
+$f000 as0 nop,          ( -- )      ok<$,ram>
+\ **************************************  ok<$,ram>
+\ data memory <-> program memory operations   ok<$,ram>
+\ **************************************  ok<$,ram>
+$0008 as0 tblrd*,       ( -- )    ok<$,ram>
+$0009 as0 tblrd*+,      ( -- )    ok<$,ram>
+$000a as0 tblrd*-,      ( -- )    ok<$,ram>
+$000b as0 tblrd+*,      ( -- )    ok<$,ram>
+$000c as0 tblwt*,       ( -- )    ok<$,ram>
+$000d as0 tblwt*+,      ( -- )    ok<$,ram>
+$000e as0 tblwt*-,      ( -- )    ok<$,ram>
+$000f as0 tblwt+*,      ( -- )    ok<$,ram>
+  ok<$,ram>
+\ ***********************************************  ok<$,ram>
+\ structured conditions for  if, while, and until,  ok<$,ram>
+\ ************************************************  ok<$,ram>
+$e2 constant cc,    \ bc  ok<$,ram>
+$e3 constant nc,    \ bnc  ?
+$e6 constant mi,    \ bn  ok<$,ram>
+$e7 constant pl,    \ bnn  ok<$,ram>
+$e0 constant z,     \ bz  ?
+$e1 constant nz,    \ bnz  ?
+$e4 constant ov,    \ bov  ok<$,ram>
+$e5 constant nov,   \ bnov  ok<$,ram>
+  ok<$,ram>
+  ok<$,ram>

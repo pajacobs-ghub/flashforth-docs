@@ -1,0 +1,30 @@
+-flash-led-var
+marker -flash-led-var
+\ Flash a LED attached to pin RB0.
+
+$ff8a constant latb
+$ff93 constant trisb
+variable ms_count \ use this for setting wait period.
+
+: init ( -- )
+  1 trisb mclr  \ want RB0 as output
+;
+
+: do_output ( -- )
+  latb c@ 1 xor latb c!  \ toggle RB0
+; 
+
+: wait ( -- )
+  ms_count @ ms
+;
+
+: main ( n -- )
+  ms_count !  \ store for later use in wait
+  init
+  begin
+    do_output
+    wait
+  again
+;
+
+#500 main  \ exercise the application

@@ -1,0 +1,91 @@
+-read-adc
+marker -read-adc
+\ Read and report the analog values on AN0 through AN3.
+
+\ Registers of interest on the PIC24FV32KA30x
+$0084 constant ifs0
+
+$02c0 constant trisa
+$02c2 constant porta
+$02c4 constant lata
+$02c6 constant odca
+
+$02c8 constant trisb
+$02ca constant portb
+$02cc constant latb
+$02ce constant odcb
+
+$0300 constant adc1buf0
+$0340 constant ad1con1
+$0342 constant ad1con2
+$0344 constant ad1con3
+$0348 constant ad1chs
+
+$04e0 constant ansa
+$04e2 constant ansb
+
+$0770 constant pmd1
+
+\ bit masks
+$0001 constant mADC1MD \ pmd1
+$0001 constant mDONE \ ad1con1
+$0002 constant mSAMP
+$8000 constant mADON
+$2000 constant mAD1IF
+
+
+: adc.init ( -- )
+  $0003 trisa mset \ want RA0, RA1 as input
+  $0003 ansa mset
+  $0003 trisb mset
+  $0003 ansb mset
+  mADC1MD pmd1 mclr \ ensure module enabled
+  $0470 ad1con1 ! \ 12-bit, auto-convert
+  $0000 ad1con2 ! \ ADC references Vdd, Vss
+  $9f00 ad1con3 ! \ ADRC, 31-TAD acq-time
+  $0000 ad1chs ! \ neg input is Vss, pos input AN0
+  mADON ad1con1 mset \ Power on ADC
+  mAD1IF ifs0 mclr
+;
+
+: adc.close ( -- )
+  mADON ad1con1 mclr
+  mAD1IF ifs0 mclr
+;
+
+: adc.select ( u -- ) \ select positive input
+  $0003 and ad1chs ! \ limit selection to AN0 through AN3
+;
+
+: adc@ ( -- u )
+  mDONE ad1con1 mclr
+  mSAMP ad1con1 mset \ Start sampling
+  begin mDONE ad1con1 mtst until \ Wait until done.
+  adc1buf0 @
+;
+
+: adc@.filter ( -- u )
+  0 \ start of sum
+  8 for adc@ + next
+  8 /
+;
+ 
+: wait ( -- )
+  #500 ms
+;
+
+: adc.test ( -- )
+  adc.init 
+  begin
+    0 adc.select adc@.filter u.
+    1 adc.select adc@.filter u.
+    cr
+    wait
+  key? until
+  adc.close
+;
+
+\ Exercise the application, writing digitized values periodically
+\ until any key is pressed.
+\ decimal
+\ adc.test 

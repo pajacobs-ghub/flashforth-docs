@@ -1,0 +1,21 @@
+\ A couple of utility words from Pete Zawasky.
+\
+\ c?% is useful to look at SFRs.
+\ .mem is useful to examine further what Mikael was saying 
+\      about FORGET vs EMPTY.
+
+-pz-words
+marker -pz-words
+
+: .mem  ( -- )  \ print current memory locations
+  base @  hex
+  cr ." flash  "  flash  here #4 u.r
+  cr ." eeprom "  eeprom here #4 u.r
+  cr ." ram    "  ram    here #4 u.r
+  base !  ;
+
+: c?%  ( addr -- )  \ print byte contents at addr in binary
+  2 spaces base @ swap
+  c@ 8 bin u.r
+  base !  ;
+
