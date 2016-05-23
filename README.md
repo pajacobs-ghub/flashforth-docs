@@ -5,13 +5,21 @@ programming environment for PIC and AVR microcontrollers.
 These documents, in PDF format, are:
 
 * [Elements of FlashForth](http://espace.library.uq.edu.au/view/UQ:321883)
+  An overview of the Forth language, as implemented by FlashForth.
+  Although examples were done on a PIC18 microcontroller, 
+  we have tried to abstract the discussion from particular hardware
+  so that it is relevant to all FlashForth systems.
 * [A Tutorial Guide to Programming PIC18, PIC24 and AVR Microcontrollers with FlashForth](http://espace.library.uq.edu.au/view/UQ:330707)
+  Here we have tried to provide motivational examples, tied to real hardware and exercises.
 * [FlashForth 5 Quick Reference for PIC and AVR Microcontrollers.](http://espace.library.uq.edu.au/view/UQ:330706)
+  This should be good to have printed and on the desk when working with FlashForth.
+  At least, that's how I use it.
+  It works in a PDF viewer just as well, with the advantage of being easily searchable.
 
-however, the latest versions can be built from this source collection.
+The latest versions can be built from this source collection.
 Another benefit of cloning this repository is that the Forth sources 
-for the examples are available in an easily copied form.
-At least, easier than cutting and pasting from PDF files.
+for the examples are available in an easily copied form
+(at least, easier than cutting and pasting from PDF files).
 
 ## Directory Contents
 * `latex/`: The LaTeX source for the text of the reports. 
