@@ -335,7 +335,7 @@ There, you will see that you can get a packaged release or you can clone the git
 \medskip\noindent
 To build from this source, you will need to start up your integrated development environment 
 (be it MPLAB, MPLAB-X or AVR Studio), open the program source and config files in this IDE 
-and edit the config file(s) match your selection of oscillator.
+and edit the config file(s) to match your selection of oscillator.
 There are other options to customize but the choice of oscillator is the main one.
 The machine code can then be assembled and programmed into your microcontroller with 
 a suitable device programmer (PICkit3, ICD3, STK500, AVRISP MkII, ...).
@@ -413,9 +413,9 @@ With 426 bytes of SRAM used (another 3470 free) and
 8948 bytes of program memory used (56588 free),
 For the PIC18F26K22 MCU, FlashForth occupies only about one-seventh of 
 the microcontroller's program memory.
-Most of the memory is available for the your application.
+Most of the memory is available for your application.
 For more details on the SRAM memory map, 
-see ``The Hitchhiker's Guide to FlashForth on PIC18 Microcontrollers''.
+see the FlashForth 5 Quick Reference \cite{jacobs_2016b}.
 There, Mikael Nordman has provided a memory map that shows how
 the SRAM memory is allocated within the FlashForth system. 
 
@@ -572,7 +572,7 @@ or of FlashForth.
 Our interest will primarily be in driving the various peripherals of the MCU
 rather than doing arithmetic or dealing with abstract data.
 
-\subsection{Hello, World: Flash a LED on the PIC18FX6K22}
+\subsection{Hello, World: Flash a light-emitting diode with the PIC18}
 %
 The microcontroller version of the ``Hello, World'' program is typically a program that
 flashes a single LED.
@@ -594,11 +594,10 @@ Notes on this program:
  \item Line 2 records the state of the dictionary and defines the word \verb!-flash-led!
   so that we can reset the dictionary to its state before the code was compiled, 
   simply by executing the word \verb!-flash-led!.
- \item Lines 3 and 4 define convenient names for the addresses of the file registers 
-  that control IO-port B.
+ \item Lines 3 and 4 define convenient names for the addresses of 
+  the special function registers (SFRs) that control IO-port B.
   Note the literal hexadecimal notation with the \verb!$! character.
-  In the PIC18F family, the special function registers for interacting with the 
-  MCU hardware appear near the top of the 64k FlashForth memory space.
+  In the PIC18F family, the SFRs appear near the top of the 64k FlashForth memory space.
  \item Line 5 is a colon definition for the word \verb!init! that sets up the peripheral
   hardware.  
   Here, we set pin RB0 as output.
@@ -644,7 +643,7 @@ may not compile without complaint if you don't clean up after each exercise.
 
 
 \bigskip
-\subsection{Flash a LED on the PIC24FV32KA302}
+\subsection{Flash a light-emitting diode with the PIC24}
 %
 
 \noindent
@@ -660,13 +659,13 @@ Notes on this program:
 \item On line 5, we compute the bit pattern for selecting the MCU pin rather than writing it explicitly.
   We start with a 1 in the least-significant bit of the 16-bit word and then shift it left 15 places,
   to produce the binary value \verb!%1000000000000000!
-\item On line 7, we use 16-bit fetch \verb!@! and store \verb?!? operations because the hardware
-  special function registers on this microcontroller are 16 bits wide.
+\item On line 7, we use 16-bit fetch \verb!@! and store \verb?!? operations because the
+  special function registers for controlling the hardware on this microcontroller are 16 bits wide.
 \end{itemize}
 
 
 \bigskip
-\subsection{Flash a LED on the ATmega328P}
+\subsection{Flash a light-emitting diode with the ATmega}
 %
 
 \noindent
@@ -685,7 +684,7 @@ Notes on this program:
 
 
 \newpage
-\subsection{Set the cycle duration with a variable (PIC18FX6K22)}
+\subsection{Set the cycle duration with a variable (PIC18)}
 %
 We enhance the initial demonstration by making the waiting period setable.
 Because of the interactive FlashForth environment, 
@@ -909,7 +908,7 @@ Notes on this program:
     RB3 is maintained high (and is of no consequence) for this 3-column keypad, however, 
     it would be used for a 4x4 keypad.
   \item Lines 36 and 47 make use of the for--next control construct to work through 
-    the set of 12 scan codes
+    the set of 12 scan codes.
   \item We should go further by making use a state-machine 
     and also keeping track of the last key pressed.
 \end{itemize}
@@ -981,7 +980,7 @@ Notes on this program:
 \begin{itemize}
   \item On this microcontroller, we choose to use the first SPI module, again because
     it results in a convenient set of pins.
-    Section\,\ref{i2c-sec} uses the I$^2$C pins on \verb!RB5! and \verb!RB6!
+    Section\,\ref{i2c-sec} uses the I$^2$C pins on \verb!RB5! and \verb!RB6!.
   \item On lines 43 through 46, the SPI1 module is configured to behave much like the 
     8-bit SPI module on the PIC18F26K22.
     If we didn't care about making a common set of words for the three example processors
@@ -1045,7 +1044,7 @@ with I$^2$C slave devices.
     \verb!i2c.c@.ack! reads a byte and asserts an acknowledge (ACK) to indicate to the slave device that
     another byte will be read subsequently.
     \verb!i2c.c@.nack! reads a byte and asserts a NACK to indicate to the slave that no more bytes are wanted.
-  \item The word to sending a byte to the slave device is \verb?i2c.c!?.
+  \item The word to send a byte to the slave device is \verb?i2c.c!?.
     This word leaves a flag to indicate the state of the ACK bit following the action of sending the byte.
     If the slave asserted ACK, the flag will be \verb!0!.
     You may \verb!drop! this flag if it not of interest to you.
@@ -1134,7 +1133,7 @@ Notes on this program:
   \item \verb!mcp3422-run! is the top-level word that initializes the hardware, then periodically
     reads the MCP3422 data and reports the voltage (in millivolts) to the user terminal.
     The program runs until a key is pressed.
-  \item The converted value is read from the MCP3422 as and 18-bit value in 2-complement format.
+  \item The converted value is read from the MCP3422 as an 18-bit value in 2-complement format.
     The word \verb!mcp3422@! reads the data as three bytes from the I$^2$C port and then 
     shuffles it into a double-cell value that is left on the stack, along with a flag to indicate
     whether the value sent by the MCP3422 happened to be the latest data.
