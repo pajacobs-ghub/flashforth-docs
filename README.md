@@ -41,6 +41,8 @@ for the examples are available in an easily copied form
 * `pic18/`: Forth code specific to the Microchip's 8-bit PIC18F microcontrollers.
 * `pic24/`: Forth code specific to 16-bit PIC24F, dsPIC30 and dsPIC33 
    families of microcontrollers.
+* `pdf/`: Definitive PDF versions that might be more up-to-date than
+   the files in the UQespace archive.
  
 ## Building the Documents
 I like to build the PDF documents with pdflatex, from within Kile.
