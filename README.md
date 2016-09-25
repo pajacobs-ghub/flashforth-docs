@@ -4,16 +4,16 @@ reference documents for the [FlashForth](http://www.flashforth.com)
 programming environment for PIC and AVR microcontrollers.
 These documents, in PDF format, are:
 
-* Elements of FlashForth https://espace.library.uq.edu.au/view/UQ:321883
+* Elements of FlashForth (2013) https://espace.library.uq.edu.au/view/UQ:321883
   An overview of the Forth language, as implemented by FlashForth.
   Although examples were done on a PIC18 microcontroller, 
   we have tried to abstract the discussion from particular hardware
   so that it is relevant to all FlashForth systems.
-* A Tutorial Guide to Programming PIC18, PIC24 and AVR Microcontrollers with FlashForth
-  https://espace.library.uq.edu.au/view/UQ:330707
+* A Tutorial Guide to Programming PIC18, PIC24 and AVR Microcontrollers with FlashForth (2016)
+  https://espace.library.uq.edu.au/view/UQ:396020
   Here we have tried to provide motivational examples, tied to real hardware and exercises.
-* FlashForth 5 Quick Reference for PIC and AVR Microcontrollers.
-  https://espace.library.uq.edu.au/view/UQ:330706
+* FlashForth 5 Quick Reference for PIC and AVR Microcontrollers. (2016)
+  https://espace.library.uq.edu.au/view/UQ:396019
   This should be good to have printed and on the desk when working with FlashForth.
   At least, that's how I use it.
   It works in a PDF viewer just as well, with the advantage of being easily searchable.
