@@ -1,5 +1,5 @@
-% eoff.tex
-% PJ, 27-May-2013
+% elements-of-flash-forth-5.tex
+% PJ, 27-May-2013, 2017-02-05
 
 \documentclass[12pt,a4paper]{article}
 \usepackage[body={16cm,24cm}]{geometry}
@@ -36,13 +36,13 @@
 %------------------------------------------------------------------
 
 \title{
-    Elements of FlashForth.
+    Elements of FlashForth 5.
 }
 \author{
-    Mechanical Engineering Report 2013/08\\
+    Mechanical Engineering Report 2017/01\\
     Peter Jacobs\thanks{peterj@mech.uq.edu.au}, 
     Pete Zawasky\thanks{PZEF Company -- Hardware and Software for Instrumentation and Control; pzawasky@pzef.net} and 
-    Mikael Nordman\thanks{http://personal.inet.fi/private/oh2aun/; mikael.nordman@pp1.inet.fi}\\
+    Mikael Nordman\thanks{http://www.flashforth.com/; mikael.nordman@flashforth.com}\\
     School of Mechanical and Mining Engineering\\
     The University of Queensland.
 }
@@ -51,7 +51,7 @@
 \maketitle
 
 \begin{abstract}
-This report is a remix of material from a number Forth tutorials and references, 
+This report is a remix of material from a number of Forth tutorials and references, 
 adapted to the FlashForth environment.
 It provides some examples and explanation of using FlashForth on a PIC18 microcontroller
 while concentrating on the features of the language rather than the details of the
@@ -64,7 +64,7 @@ These defining words are convenient for making arrays.
 Finally, strings and formatted numeric output are discussed.
 \end{abstract}
 
-\bigskip
+\newpage
 \tableofcontents
 
 \cleardoublepage
@@ -76,9 +76,9 @@ It is effectively a small toolkit with which you construct a specialized diction
 that work together to form your application code.
 This tutorial will explore and explain the workings of the FlashForth toolkit
 running on a Microchip PIC18 microcontroller
-and complements the more hardware-oriented tutorial \cite{jacobs_2012b},
-the FlashForth quick reference \cite{jacobs_2012c} and
-the FlashForth website \cite{flashforth}.
+and complements the more hardware-oriented tutorial \cite{jacobs_2016a},
+the FlashForth quick reference \cite{jacobs_2016b} and
+the FlashForth website \cite{flashforth5}.
 Our interest is in using Forth on the microcontroller in an embedded system,
 such as a special-purpose signal timing device,
 rather than as part of a general-purpose calculation on a personal computer.
@@ -87,33 +87,35 @@ rather than as part of a general-purpose calculation on a personal computer.
 There are quite a number of good introductory tutorials \cite{brodie_1987a,noble_2001a}, 
 course notes \cite{pelc_2011a},
 and references \cite{conklin_rather_2007a} 
-for programming in forth on a desktop or laptop computer,
+for programming in Forth on a desktop or laptop computer,
 however, FlashForth running on a PIC18 microcontroller is a different environment.
-In the following sections, we will follow closely J.~V.~Noble's tutorial \cite{noble_2001a},
-reusing as many of his examples and explanations verbatim, 
-while adapting the overall tutorial to FlashForth.
+In the following sections, we will follow closely J.~V.~Noble's tutorial \cite{noble_2001a}
+for using Forth on a personal computer,
+reusing many of his examples and explanations verbatim, 
+while adapting the overall tutorial to the use of FlashForth on a microcontroller.
 
-\bigskip
+\newpage
 \section{Getting started}
 \label{sec:getting-started}
 %
 Although we will be using FlashForth on a PIC18 microcontroller, we communicate with it
 using a serial terminal program running on a personal computer.
-On linux, the gtkterm terminal program is convenient and can be started with the command
-\begin{verbatim}
- $ sudo gtkterm --port=/dev/ttyUSB0 --speed=38400 --delay=10 --flow=Xon
-\end{verbatim}
+FlashForth comes with a couple of terminal programs (in Python and Tcl/Tk)
+that have some conveniences when sending files to the microcontroller,
+so we will start our interaction with one of those.
+Starting the \verb!ff-shell.tcl! program in a normal terminal window
+will start up the Tcl/Tk shell program.
 Pressing the \fbox{ENTER $\hookleftarrow$} key a couple of times should get the display 
 as shown in Figure\,\ref{fig:opening-screen}.
-The \verb!ok<$,ram>! prompt indicates that the current base 
-for representing numbers in hexadecimal format 
+The \verb!ok<#,ram>! prompt indicates that the current base is ten,
+for representing numbers in decimal format, 
 and that the current context for making variables is static RAM, 
 rather than the Flash memory and EEPROM that is also available in the microcontroller.
 
 \begin{figure}[htb]
  \centering
- \includegraphics[width=0.9\textwidth]{../figs/ff-start-screen.png}
- \caption{Opening screen using \texttt{gtkterm}.}
+ \includegraphics[width=0.9\textwidth]{../figs/ff5-start-screen-ff-shell-tcl.png}
+ \caption{Opening screen using \texttt{ff-shell.tcl}.}
  \label{fig:opening-screen}
 \end{figure}
 
@@ -123,7 +125,7 @@ being spelled with lower case.
 Also, being intended for use in an embedded system, there is no command to exit the system.
 FlashForth only stops when the power is removed or a reset occurs.
 
-\bigskip
+\newpage
 \section{The interpreter}
 \label{sec:interpreter}
 %
@@ -136,10 +138,12 @@ execute at power-up.
 
 \medskip
 Here is an example of executing a FlashForth word: \vspace{7pt} \\
+\verb!hex ! \fbox{$\hookleftarrow$} \verb!ok<$,ram>! \vspace{7pt} \\
+This executes the word that sets the base for representing numbers to 16, 
+a format that you are likely to be familiar with
+if you are a student of mechatronics or computing.
+For the moment, let's return to using decimal numbers: \vspace{7pt} \\
 \verb!decimal ! \fbox{$\hookleftarrow$} \verb!ok<#,ram>! \vspace{7pt} \\
-This executes the word that sets the base for representing numbers to 10, 
-a format that you are likely to be more familiar with
-unless you are a student of mechatronics or computing.
 
 \medskip
 Now, let's try something a bit more interesting by entering: \vspace{7pt} \\
@@ -179,6 +183,7 @@ and left the result 19 on the stack.
 The word ``.'' (dot) removed 19 from the stack and sent it on the standard output device,
 the serial port for FlashForth.
 Here is a picture of the stack through the process.
+The second-top element of the stack is labelled NOS for \textit{next on stack}.
 \begin{center}
  \begin{tabular}{lc|ccccc}
  word executed & & 2 & 17 & + & . \\
@@ -205,27 +210,45 @@ For example, \verb!$10!, \verb!#16! and \verb!%10000! all represent the decimal 
 \medskip
 If the incoming text cannot be located in the dictionary nor interpreted as a number,
 FlashForth issues an error message. \vspace{7pt} \\
-\verb!0A ! \fbox{$\hookleftarrow$} \verb! 0A ?! \vspace{7pt} \\
+\verb!$0A ! \fbox{$\hookleftarrow$} \verb! $0A ?! \vspace{7pt} \\
 \verb!thing ! \fbox{$\hookleftarrow$} \verb! thing ?! \vspace{7pt} \\
-Note that the apparent hexadecimal number \verb!0A! was not interpreted as such 
-because of the case sensitivity of FlashForth.
+Note that the apparent hexadecimal number \verb!$0A! was not interpreted as such 
+because of the case sensitivity of FlashForth. \vspace{7pt} \\
+\verb!decimal $0a ! \fbox{$\hookleftarrow$} \verb!  ok<#,ram>10 ! \vspace{7pt} \\
+This time, the hexadecimal number was recognized and its value appears on the stack,
+which is printed (in base ten) after the prompt.
+To assist with the handling of numbers with many digits,
+FlashForth allows the convenience of embedding periods into the text of the number.
+This is most useful for binary numbers but it works generally. \vspace{7pt} \\
+\verb!hex ! \fbox{$\hookleftarrow$} \verb! ok<$,ram> ! \vspace{7pt} \\
+\verb!%0100.0000.0000.0000 ! \fbox{$\hookleftarrow$} \verb! ok<$,ram>4000 ! \vspace{7pt} \\
+\verb!$4000 ! \fbox{$\hookleftarrow$} \verb! ok<$,ram>4000 4000 ! \vspace{7pt} \\
+\verb!$4.0.0.0 ! \fbox{$\hookleftarrow$} \verb! ok<$,ram>4000 4000 4000 ! \vspace{7pt} \\
+\verb!$4. ! \fbox{$\hookleftarrow$} \verb! ok<$,ram>4000 4000 4000 4 0 ! \vspace{7pt} \\
+\verb!decimal ! \fbox{$\hookleftarrow$} \verb! ok<#,ram>16384 16384 16384 4 0 ! \vspace{7pt} \\
+Note that the period after the number resulted in a double value being placed 
+on the stack as two (separate) items.
+
+\medskip
 Other error messages that you might see include \verb!SP ?!, for a stack pointer error, 
 and \verb!CO ?!, for a context error.
 If the word \verb!*! was to be executed without there being at least two numbers sitting 
 on the stack, the interpreter would abort, issuing the \verb!SP! error message, 
-and then wait for new input.
-
-\medskip
-Finally, here is the classic \textit{Hello World!} program. \vspace{7pt} \\
-\verb?: hi ." Hello, World!" ; ? \fbox{$\hookleftarrow$} \verb! ok<$,ram>! \vspace{7pt} \\
-Forth lets you output text using the word \verb!."! while the words \verb!:! and \verb!;!
-begin and end the definition of your own word \verb!hi!.
-Note that blank characters are used to delimit each of these words.
-Now, type in \verb!hi! and see what happens. \vspace{7pt} \\
-\verb!hi ! \fbox{$\hookleftarrow$} \verb? Hello, World! ok<$,ram>? \vspace{7pt}
-
+and then wait for new input. \vspace{7pt} \\
+\verb!*  ! \fbox{$\hookleftarrow$} \verb! ok<#,ram> SP? ! 
 
 \bigskip
+Finally, to show the compilation and use of a new word,
+here is the classic \textit{Hello World!} program. \vspace{7pt} \\
+\verb?: hey ." Hello, World!" ; ? \fbox{$\hookleftarrow$} \verb! ok<#,ram>! \vspace{7pt} \\
+Forth lets you output text using the word \verb!."! while the words \verb!:! and \verb!;!
+begin and end the definition of your own word \verb!hey!.
+Note that blank characters are used to delimit each of these words.
+Now, type in \verb!hey! and see what happens. \vspace{7pt} \\
+\verb!hey ! \fbox{$\hookleftarrow$} \verb? Hello, World! ok<#,ram>? \vspace{7pt}
+
+
+\newpage
 \section{Extending the dictionary}
 \label{sec:dictionary}
 %
@@ -237,7 +260,7 @@ used to make new dictionary entries (\textit{i.e.} words).
 The most important are \verb!:! (start a new definition) and
 \verb!;! (terminate the definition).
 Let's try this out by typing: \vspace{7pt} \\
-\verb!: *+  *  +  ;! \fbox{$\hookleftarrow$} \verb! ok<$,ram>! \vspace{7pt} \\
+\verb!: *+  *  +  ;! \fbox{$\hookleftarrow$} \verb! ok<#,ram>! \vspace{7pt} \\
 What happened?
 The action of ``:'' is to create a new dictionary entry named \verb!*+! and 
 switch from \textit{interpret} to \textit{compile} mode.
@@ -259,7 +282,7 @@ second, it switched back from compile mode to interpret mode.
 
 \medskip
 Now, try out your new word: \vspace{7pt} \\
-\verb!decimal 5 6 7 *+ . ! \fbox{$\hookleftarrow$} \verb! 47 ok<#,ram>! \vspace{7pt} \\
+\verb!5 6 7 *+ . ! \fbox{$\hookleftarrow$} \verb! 47 ok<#,ram>! \vspace{7pt} \\
 This example illustrated two principal activities of working in Forth:
 adding a new word to the dictionary, and trying it out as soon as it was defined.
 
