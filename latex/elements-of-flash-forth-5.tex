@@ -142,12 +142,14 @@ Here is an example of executing a FlashForth word: \vspace{7pt} \\
 This executes the word that sets the base for representing numbers to 16, 
 a format that you are likely to be familiar with
 if you are a student of mechatronics or computing.
+Note that both the text that your typed and the FlashForth response is shown
+together, on either side of the Enter symbol \fbox{$\hookleftarrow$}.
 For the moment, let's return to using decimal numbers: \vspace{7pt} \\
 \verb!decimal ! \fbox{$\hookleftarrow$} \verb!ok<#,ram>! \vspace{7pt} \\
 
 \medskip
 Now, let's try something a bit more interesting by entering: \vspace{7pt} \\
-\verb!2 17 + . ! \fbox{$\hookleftarrow$} \verb! 19 <#,ram>! \vspace{7pt} \\
+\verb!2 17 + . ! \fbox{$\hookleftarrow$} \verb!19 <#,ram>! \vspace{7pt} \\
 This time FlashForth more clearly shows its interpretive nature.
 A small program called the \textit{outer interpreter} continually loops,
 waiting for input from the serial port.
@@ -155,19 +157,11 @@ The input is a sequence of text strings (words or numbers) separated from each o
 by the standard Forth delimiter, one or more ASCII blank characters.
 
 \medskip
-% As shown in Figure\,\ref{fig:outer-interpreter}, % the flow chart is dodgy
 The text strings are interpreted in only three ways: words (subroutine or function names),
 numbers, or \textit{not defined}.
 The outer interpreter tries first to look for the incoming word in the \textit{dictionary}
 that contains the already defined words.
 If it finds the word, it executes the corresponding code.
-
-% \begin{figure}[htb]
-%  \centering
-%  \includegraphics[width=0.6\textwidth]{../figs/forth-outer-interpreter.pdf}
-%  \caption{Flowchart of the FlashForth outer interpreter.}
-%  \label{fig:outer-interpreter}
-% \end{figure}
 
 \medskip
 If no dictionary entry exists, the interpreter tries to read the input as a number.  
@@ -200,7 +194,7 @@ The second-top element of the stack is labelled NOS for \textit{next on stack}.
 
 \medskip
 We might also work in hexadecimal, which was the default at power on: \vspace{7pt} \\
-\verb!hex 0a 14 * . ! \fbox{$\hookleftarrow$} \verb! c8 <$,ram>! \vspace{7pt} \\
+\verb!hex 0a 14 * . ! \fbox{$\hookleftarrow$} \verb!c8 <$,ram>! \vspace{7pt} \\
 This default is probably convenient for most embedded systems work,
 where setting and monitoring bit patterns forms a large part of the code.
 If you want to explicitly indicate the base of a number, you can prepend a sigil to the
@@ -210,22 +204,22 @@ For example, \verb!$10!, \verb!#16! and \verb!%10000! all represent the decimal 
 \medskip
 If the incoming text cannot be located in the dictionary nor interpreted as a number,
 FlashForth issues an error message. \vspace{7pt} \\
-\verb!$0A ! \fbox{$\hookleftarrow$} \verb! $0A ?! \vspace{7pt} \\
-\verb!thing ! \fbox{$\hookleftarrow$} \verb! thing ?! \vspace{7pt} \\
+\verb!$0A ! \fbox{$\hookleftarrow$} \verb!$0A ?! \vspace{7pt} \\
+\verb!thing ! \fbox{$\hookleftarrow$} \verb!thing ?! \vspace{7pt} \\
 Note that the apparent hexadecimal number \verb!$0A! was not interpreted as such 
 because of the case sensitivity of FlashForth. \vspace{7pt} \\
-\verb!decimal $0a ! \fbox{$\hookleftarrow$} \verb!  ok<#,ram>10 ! \vspace{7pt} \\
+\verb!decimal $0a ! \fbox{$\hookleftarrow$} \verb!ok<#,ram>10 ! \vspace{7pt} \\
 This time, the hexadecimal number was recognized and its value appears on the stack,
 which is printed (in base ten) after the prompt.
 To assist with the handling of numbers with many digits,
 FlashForth allows the convenience of embedding periods into the text of the number.
 This is most useful for binary numbers but it works generally. \vspace{7pt} \\
-\verb!hex ! \fbox{$\hookleftarrow$} \verb! ok<$,ram> ! \vspace{7pt} \\
-\verb!%0100.0000.0000.0000 ! \fbox{$\hookleftarrow$} \verb! ok<$,ram>4000 ! \vspace{7pt} \\
-\verb!$4000 ! \fbox{$\hookleftarrow$} \verb! ok<$,ram>4000 4000 ! \vspace{7pt} \\
-\verb!$4.0.0.0 ! \fbox{$\hookleftarrow$} \verb! ok<$,ram>4000 4000 4000 ! \vspace{7pt} \\
-\verb!$4. ! \fbox{$\hookleftarrow$} \verb! ok<$,ram>4000 4000 4000 4 0 ! \vspace{7pt} \\
-\verb!decimal ! \fbox{$\hookleftarrow$} \verb! ok<#,ram>16384 16384 16384 4 0 ! \vspace{7pt} \\
+\verb!hex ! \fbox{$\hookleftarrow$} \verb!ok<$,ram> ! \vspace{7pt} \\
+\verb!%0100.0000.0000.0000 ! \fbox{$\hookleftarrow$} \verb!ok<$,ram>4000 ! \vspace{7pt} \\
+\verb!$4000 ! \fbox{$\hookleftarrow$} \verb!ok<$,ram>4000 4000 ! \vspace{7pt} \\
+\verb!$4.0.0.0 ! \fbox{$\hookleftarrow$} \verb!ok<$,ram>4000 4000 4000 ! \vspace{7pt} \\
+\verb!$4. ! \fbox{$\hookleftarrow$} \verb!ok<$,ram>4000 4000 4000 4 0 ! \vspace{7pt} \\
+\verb!decimal ! \fbox{$\hookleftarrow$} \verb!ok<#,ram>16384 16384 16384 4 0 ! \vspace{7pt} \\
 Note that the period after the number resulted in a double value being placed 
 on the stack as two (separate) items.
 
@@ -235,17 +229,17 @@ and \verb!CO ?!, for a context error.
 If the word \verb!*! was to be executed without there being at least two numbers sitting 
 on the stack, the interpreter would abort, issuing the \verb!SP! error message, 
 and then wait for new input. \vspace{7pt} \\
-\verb!*  ! \fbox{$\hookleftarrow$} \verb! ok<#,ram> SP? ! 
+\verb!*  ! \fbox{$\hookleftarrow$} \verb!ok<#,ram> SP? ! 
 
 \bigskip
 Finally, to show the compilation and use of a new word,
 here is the classic \textit{Hello World!} program. \vspace{7pt} \\
-\verb?: hey ." Hello, World!" ; ? \fbox{$\hookleftarrow$} \verb! ok<#,ram>! \vspace{7pt} \\
+\verb?: hey ." Hello, World!" ; ? \fbox{$\hookleftarrow$} \verb!ok<#,ram>! \vspace{7pt} \\
 Forth lets you output text using the word \verb!."! while the words \verb!:! and \verb!;!
 begin and end the definition of your own word \verb!hey!.
 Note that blank characters are used to delimit each of these words.
 Now, type in \verb!hey! and see what happens. \vspace{7pt} \\
-\verb!hey ! \fbox{$\hookleftarrow$} \verb? Hello, World! ok<#,ram>? \vspace{7pt}
+\verb!hey ! \fbox{$\hookleftarrow$} \verb?Hello, World! ok<#,ram>? \vspace{7pt}
 
 
 \newpage
@@ -260,7 +254,7 @@ used to make new dictionary entries (\textit{i.e.} words).
 The most important are \verb!:! (start a new definition) and
 \verb!;! (terminate the definition).
 Let's try this out by typing: \vspace{7pt} \\
-\verb!: *+  *  +  ;! \fbox{$\hookleftarrow$} \verb! ok<#,ram>! \vspace{7pt} \\
+\verb!: *+  *  +  ;! \fbox{$\hookleftarrow$} \verb!ok<#,ram>! \vspace{7pt} \\
 What happened?
 The action of ``:'' is to create a new dictionary entry named \verb!*+! and 
 switch from \textit{interpret} to \textit{compile} mode.
@@ -282,7 +276,7 @@ second, it switched back from compile mode to interpret mode.
 
 \medskip
 Now, try out your new word: \vspace{7pt} \\
-\verb!5 6 7 *+ . ! \fbox{$\hookleftarrow$} \verb! 47 ok<#,ram>! \vspace{7pt} \\
+\verb!5 6 7 *+ . ! \fbox{$\hookleftarrow$} \verb!47 ok<#,ram>! \vspace{7pt} \\
 This example illustrated two principal activities of working in Forth:
 adding a new word to the dictionary, and trying it out as soon as it was defined.
 
@@ -322,7 +316,7 @@ each consisting of a number of cells that can hold 16-bit numbers.
 
 \medskip
 The Forth input line \vspace{7pt} \\
-\verb!decimal 2 5 73 -16 ! \fbox{$\hookleftarrow$} \verb! ok<#,ram>! \vspace{7pt} \\
+\verb!decimal 2 5 73 -16 ! \fbox{$\hookleftarrow$} \vspace{7pt} \\
 leaves the parameter stack in the state\\
 \begin{center}
 \begin{tabular}{rrl}
@@ -340,16 +334,11 @@ We will usually employ zero-based relative numbering in Forth data structures
 such as stacks, arrays and tables.
 Note that, when a sequence of numbers is entered like this, the right-most number
 becomes TOS and the left-most number sits at the bottom of the stack.
-%For this turorial, it will also be convenient to represent the stack horizontally, 
-%with the TOS on the right.  
-%That way, the state of the stack \vspace{7pt} \\
-%\textbullet \verb!   2   5  73 -16! \vspace{7pt} \\
-%will appear much like the original line of input text,
-%where \textbullet~ delimits the bottom of the stack.
 
 \medskip
 Suppose that we followed the original input line with the line \vspace{7pt} \\
-\verb!+ - * . ! \fbox{$\hookleftarrow$} \textit{xxx} \verb! ok<#,ram>! \vspace{7pt} \\
+\verb!+ - * . ! \fbox{$\hookleftarrow$} \vspace{7pt} \\
+to produce a value  \textit{xxx}.
 What would the \textit{xxx} be?
 The operations would produce the successive stacks:
 \begin{center}
@@ -364,21 +353,8 @@ The operations would produce the successive stacks:
  & \parbox[t]{30pt}{\fbox{\texttt{-104}} \\ \rule{30pt}{2pt}}
  & \parbox[t]{30pt}{\rule{30pt}{2pt}} \\
  \end{tabular}
-
-% Old layout was horizontal.
-% \begin{tabular}{rll}
-% \hline
-%  resulting stack contents & operation & comment \\
-%  \hline
-%  \textbullet \verb!    2    5   73  -16 ! &  & initial stack \\
-%  \textbullet \verb!    2    5   57 ! & \verb!+! & \\
-%  \textbullet \verb!    2  -52 ! & \verb!-! & \\
-%  \textbullet \verb! -104 ! & \verb!*! & \\
-%  \textbullet \verb! ! & \verb!.! & ``104'' sent to serial port \\
-%  \hline
-% \end{tabular}
 \end{center}
-After both lines, the gtkterm console shows
+After both lines, the terminal window shows
 \begin{verbatim}
 decimal 2 5 73 -16  ok<#,ram>2 5 73 65520 
 + - * . -104  ok<#,ram>
@@ -408,7 +384,7 @@ We can also incorporate the number into the definition of a Forth word.
 The word \verb!drop! removes a number from the TOS thus making NOS the new TOS.
 The word \verb!swap! exchanges the top 2 numbers.
 \verb!dup! copies the TOS into NOS, pushing all of the other numbers down.
-\verb!rot! rotates the top 3 numbers.
+\verb!rot! rotates the top 3 numbers, bring the number that was just below NOS to the TOS.
 These actions are shown below.
 \begin{center}
  \begin{tabular}{lc|ccccc}
@@ -423,45 +399,26 @@ These actions are shown below.
  & \parbox[t]{30pt}{\fbox{\texttt{~~~2}} \\ \fbox{\texttt{~~~2}} \\ \fbox{\texttt{~~~5}} \\ \fbox{\texttt{~~73}} \\ \rule{30pt}{2pt}}
  \end{tabular}
 
-% Old layout was horizontal.
-%  \begin{tabular}{rll}
-%   \hline
-%   resulting stack contents & operation & comment \\
-%   \hline
-%   \textbullet \verb!    2    5   73  -16 ! &  & initial stack \\
-%   \textbullet \verb!    2    5   73 ! & \verb!drop! & \\
-%   \textbullet \verb!    2   73    5 ! & \verb!swap! & \\
-%   \textbullet \verb!   73    5    2 ! & \verb!rot! & \\
-%   \textbullet \verb!   73    5    2    2 ! & \verb!dup! & \\
-%   \hline
-%  \end{tabular}
 \end{center}
 FlashForth also includes the words \verb!over!, \verb!tuck! and \verb!pick! that act as shown below.
+\verb!over! makes a copy of NOS and then leaves it as the new TOS.
+\verb!tuck! make a copy of the TOS and inserts the copy just below the NOS.
 Note that \verb!pick! must be preceeded by an integer that (gets put on the stack briefly and) 
 says where on the stack an element gets \verb!pick!ed.
+Also, for the PIC18 version of FlashForth, 
+the definition of \verb!pick! is provided as Forth source code in the file \verb!pick.txt!.
+The content of this file must be sent to the microcontroller to define the word before we try to use it. 
 \begin{center}
  \begin{tabular}{lc|cccc}
- word executed & & & \verb!over! & \verb!tuck! & \verb!3 pick! \\
+ word executed & & & \verb!over! & \verb!tuck! & \verb!4 pick! \\
  \\
  stack result  
  & \parbox[t]{35pt}{TOS \\ NOS} 
  & \parbox[t]{30pt}{\fbox{\texttt{~-16}} \\ \fbox{\texttt{~~73}} \\ \fbox{\texttt{~~~5}} \\ \fbox{\texttt{~~~2}} \\ \rule{30pt}{2pt}} 
  & \parbox[t]{30pt}{\fbox{\texttt{~~73}} \\ \fbox{\texttt{~-16}} \\ \fbox{\texttt{~~73}} \\ \fbox{\texttt{~~~5}} \\ \fbox{\texttt{~~~2}} \\ \rule{30pt}{2pt}}
  & \parbox[t]{30pt}{\fbox{\texttt{~~73}} \\ \fbox{\texttt{~-16}} \\ \fbox{\texttt{~~73}} \\ \fbox{\texttt{~~73}} \\ \fbox{\texttt{~~~5}} \\ \fbox{\texttt{~~~2}} \\ \rule{30pt}{2pt}}
- & \parbox[t]{30pt}{\fbox{\texttt{~~73}} \\ \fbox{\texttt{~~73}} \\ \fbox{\texttt{~-16}} \\ \fbox{\texttt{~~73}} \\ \fbox{\texttt{~~73}} \\ \fbox{\texttt{~~~5}} \\ \fbox{\texttt{~~~2}} \\ \rule{30pt}{2pt}}
+ & \parbox[t]{30pt}{\fbox{\texttt{~~~5}} \\ \fbox{\texttt{~~73}} \\ \fbox{\texttt{~-16}} \\ \fbox{\texttt{~~73}} \\ \fbox{\texttt{~~73}} \\ \fbox{\texttt{~~~5}} \\ \fbox{\texttt{~~~2}} \\ \rule{30pt}{2pt}}
  \end{tabular}
-
-% Old layout was horizontal.
-%  \begin{tabular}{rll}
-%   \hline
-%   resulting stack contents & operation & comment \\
-%   \hline
-%   \textbullet \verb!    2    5   73  -16 ! &  & initial stack \\
-%   \textbullet \verb!    2    5   73  -16   73 ! & \verb!over! & \\
-%   \textbullet \verb!    2    5   73   73  -16   73 ! & \verb!tuck! & \\
-%   \textbullet \verb!    2    5   73   73  -16   73   73 ! & \verb!3 pick! & \\
-%   \hline
-% \end{tabular}
 \end{center}
 From these actions, we can see that \verb!0 pick! is the same as \verb!dup!,
 \verb!1 pick! is a synonym for \verb!over!.
