@@ -1106,7 +1106,7 @@ the invalid index value of 5.
 You may want to handle incorrect input differently in your application.
 
 \medskip
-The FlashForth distribution comes with a file (jmptbl.txt, Appendix\,\ref{sec:jmptbl})
+The FlashForth distribution comes with a file, jmptbl.txt (in the common forth source code directory),
 that provides set of words for building jump tables.
 With these words, we can build a second jump table with a neater notation.
 \begin{verbatim}
@@ -1119,7 +1119,8 @@ JUMP_TABLE do-action-2
   default| cry
 ram
 \end{verbatim}
-This gives essentially the same behaviour.
+Note that, in the code above, we have omitted the FlashForth response on each line.
+This new jump table gives essentially the same behaviour as the first one.
 \begin{verbatim}
 \ Call up the actions.  ok<$,ram>
 3 do-action-2 crying ok<$,ram>
@@ -1137,8 +1138,8 @@ We could, for example, build a jump table with a selection of character codes as
 The \textit{Hello World!} program, back in Section\,\ref{sec:interpreter}
 could have been written a little differently, as the following transcript shows.
 \begin{verbatim}
-: hi2 s" Hello World!" cr type ;  ok<#,ram>
-hi2 
+: hey2 s" Hello World!" cr type ;  ok<#,ram>
+hey2 
 Hello World! ok<#,ram>
 \end{verbatim}
 The word \verb!s"! compiles the string into Flash memory and, at run time,
@@ -1202,208 +1203,5 @@ to sections of this tutorial:
 \bibliographystyle{unsrt}
 \bibliography{ff}
 
-\newpage
-\appendix
-\section{util38.txt}
-\label{sec:util38}
-%
-{\scriptsize
-\begin{verbatim}
-\ *********************************************************************
-\                                                                     *
-\    Filename:      util38.txt                                        *
-\    FlashForth:    3.8                                               *
-\    MCU            PIC18F                                            *
-\    Application:                                                     *
-\                                                                     *
-\    Author:        Pete Zawasky                                      *
-\    Created:       12:55 PM 9/30/2011   ppz                          *
-\    Last Edit      11:37 AM 6/8/2013    ppz                          *
-\                                                                     *
-\ *********************************************************************
-\  Based on util.fth by Mikael Nordman                                *
-\ *********************************************************************
-\  FlashForth is licensed acording to the GNU General Public License  *
-\ *********************************************************************
-
--util
-marker -util
-decimal ram
-
-\ *********************************************************************
-
-: forget   ( <name> -- )
-   bl word latest @ (f) abort" ?"
-   c>n 2- dup @ abort" ?"
-   dup flash dp ! @ latest ! ram  ;
-  
-: .mem  ( -- )          \ print current memory locations
-   base @  hex
-   cr ." flash  "  flash  here #4 u.r
-   cr ." eeprom "  eeprom here #4 u.r
-   cr ." ram    "  ram    here #4 u.r
-   base !  ;
-   
-: <=   ( n1 n2 -- flag )
-   -  1-  0<  ;    \ leave true flag if n1 less than or equal to n2
-   
-: ?dup ( x -- 0 | x x )
-   dup if dup then  ;    \ duplicate TOS only if non-zero
-   
-: fill   ( c-addr u c -- ) \ fill u bytes with c starting at c-addr
-   rot !p>r swap
-   for
-     dup pc! p+
-   next
-   r>p  drop  ;   
-
-: erase  ( c-addr u -- )
-   0 fill  ;
-
-: blanks  ( c-addr u -- )
-   bl fill  ;
-
-: pick ( xu ... x0 u -- xu ... x0 xu)
-   2* 3 + sp@ swap - @  ;
-
-: ?    ( addr -- )      \ print unsigned contents at addr
-   2 spaces @ u.  ;     \  in the current base (non-standard)
-   
-: c?   ( addr -- )      \ print byte contents at addr
-   2 spaces c@ .  ;     \  in the current base
-   
-: c?%  ( addr -- )                 \ print byte contents at addr
-   2 spaces base @ swap            \  in binary
-   c@ 8 bin u.r  base !  ;
-   
-\ Compile a word which creates n cell indexed arrays.
-\ compile-time       n array <name> where n is size of array
-\ run-time           i <name> where i is the array index
-\                               and i is zero based (0...n-1)
-: array  ( n -- )
-   create cells allot
-   does>  ( i -- 'cell )  swap cells +  ;   
-   
-\ Compile a word which creates n indexed character arrays.
-\ compile-time       n carray <name>  where n is size of array
-\ run-time           i <name> where i is the array index
-\                               and i is zero based (0...n-1)
-: carray ( n -- ) 
-   create  allot 
-   does>  ( i -- 'char ) +  ;
-
-\ Create a 20 character array in eeprom called CALIBRATE.
-\  eeprom
-\  decimal 20 carray calibrate
-\  ram    
-   
-ram  hex
-\end{verbatim}
-}
-
-
-\newpage
-\section{jmptbl.txt}
-\label{sec:jmptbl}
-%
-{\scriptsize
-\begin{verbatim}
-\ *********************************************************************
-\                                                                     *
-\    Filename:      jmptbl.txt                                        *
-\    FlashForth:    3.8                                               *
-\    MCU            PIC18F                                            *
-\    Application:                                                     *
-\                                                                     *
-\    Author:        Pete Zawasky                                      *
-\    Created:       10:34 AM 10/5/2011   ppz                          *
-\    Last Edit                 ppz                                    *
-\                                                                     *
-\ *********************************************************************
-\  Based on jt.fth by Mikael Nordman, Jump_Table by Haskell           *
-\ *********************************************************************
-\  FlashForth is licensed acording to the GNU General Public License  *
-\ *********************************************************************
-
--jmptbl
-marker -jmptbl
-
-decimal ram
-
-\ Create an execution table with n entries.
-\ Each entry consists of 'nn' cell sized comparison value
-\   and 'an' the address of the corresponding word to be executed.
-\ At least two entries must be provided, the last one being the
-\   default action.
-\
-\ Jump Table (from Haskell)
-\ Example:
-\
-\    JUMP_TABLE do.key
-\               control H  |  bkspace
-\               control Q  |  quit
-\               HEX 2B     |  escape  DECIMAL
-\                   DEFAULT|  chrout
-\ Useage:
-\    do.key  ( n -- )   \ enter with n=code-to-match on TOS
-\
-
-\ Create a jump table.
-\
-: JUMP_TABLE  ( -- )       \ compile an execution table
-              ( m -- )     \ execute a word corresponding to m
-   create
-     [ flash ] here 0 ,    \ initial test_cnt stored at pfa
-                           \ ( addr -- )
-   does>              \ ( m addr -- )
-     dup @            \ ( m a cnt -- )
-     for
-       cell+
-       2dup @ =           \ ( m a flag -- )
-       if                 \ a match was found
-         nip cell+ @ex    \ execute the matched word
-         rdrop exit       \   and exit
-       then
-       cell+            \ ( m a -- ) point to next nn to test
-     next
-     nip cell+ @ex      \ execute the default word
-   ;
-
-\ Use the words | and default| to fill jump table.
-\
-: |             ( addr m -- addr )
-    , ' ,               \ store m (match) and cfa in table
-    1 over +!  ;        \ increment test_cnt at pfa
-
-: default|      ( addr -- )
-    drop ' ,  ;         \ store default word cfa in table
-
-\ *********************************************************************
-\ Example
-\ : .1st    ( -- )
-\    ." First "
-\    ;
-\
-\ : .2nd    ( -- )
-\    ." Second "
-\    ;
-\
-\ : .3rd    ( -- )
-\    ." Third "
-\    ;
-\
-\ : .4th    ( -- )
-\    ." Default "
-\    ;
-\
-\ flash
-\ JUMP_TABLE do_test
-\       $00 | .1st
-\       $01 | .2nd
-\       $02 | .3rd
-\    default| .4th
-
-ram  hex
-\end{verbatim}
 
 \end{document}
