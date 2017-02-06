@@ -138,18 +138,18 @@ execute at power-up.
 
 \medskip
 Here is an example of executing a FlashForth word: \vspace{7pt} \\
-\verb!hex ! \fbox{$\hookleftarrow$} \verb!ok<$,ram>! \vspace{7pt} \\
+\verb!hex! \fbox{$\hookleftarrow$} \verb!  ok<$,ram>! \vspace{7pt} \\
 This executes the word that sets the base for representing numbers to 16, 
 a format that you are likely to be familiar with
 if you are a student of mechatronics or computing.
 Note that both the text that your typed and the FlashForth response is shown
 together, on either side of the Enter symbol \fbox{$\hookleftarrow$}.
 For the moment, let's return to using decimal numbers: \vspace{7pt} \\
-\verb!decimal ! \fbox{$\hookleftarrow$} \verb!ok<#,ram>! \vspace{7pt} \\
+\verb!decimal! \fbox{$\hookleftarrow$} \verb!  ok<#,ram>! \vspace{7pt} \\
 
 \medskip
 Now, let's try something a bit more interesting by entering: \vspace{7pt} \\
-\verb!2 17 + . ! \fbox{$\hookleftarrow$} \verb!19 <#,ram>! \vspace{7pt} \\
+\verb!2 17 + .! \fbox{$\hookleftarrow$} \verb!  19 <#,ram>! \vspace{7pt} \\
 This time FlashForth more clearly shows its interpretive nature.
 A small program called the \textit{outer interpreter} continually loops,
 waiting for input from the serial port.
@@ -194,7 +194,7 @@ The second-top element of the stack is labelled NOS for \textit{next on stack}.
 
 \medskip
 We might also work in hexadecimal, which was the default at power on: \vspace{7pt} \\
-\verb!hex 0a 14 * . ! \fbox{$\hookleftarrow$} \verb!c8 <$,ram>! \vspace{7pt} \\
+\verb!hex 0a 14 * .! \fbox{$\hookleftarrow$} \verb! c8 <$,ram>! \vspace{7pt} \\
 This default is probably convenient for most embedded systems work,
 where setting and monitoring bit patterns forms a large part of the code.
 If you want to explicitly indicate the base of a number, you can prepend a sigil to the
@@ -204,22 +204,22 @@ For example, \verb!$10!, \verb!#16! and \verb!%10000! all represent the decimal 
 \medskip
 If the incoming text cannot be located in the dictionary nor interpreted as a number,
 FlashForth issues an error message. \vspace{7pt} \\
-\verb!$0A ! \fbox{$\hookleftarrow$} \verb!$0A ?! \vspace{7pt} \\
-\verb!thing ! \fbox{$\hookleftarrow$} \verb!thing ?! \vspace{7pt} \\
+\verb!$0A! \fbox{$\hookleftarrow$} \verb! $0A ?! \vspace{7pt} \\
+\verb!thing! \fbox{$\hookleftarrow$} \verb! thing ?! \vspace{7pt} \\
 Note that the apparent hexadecimal number \verb!$0A! was not interpreted as such 
 because of the case sensitivity of FlashForth. \vspace{7pt} \\
-\verb!decimal $0a ! \fbox{$\hookleftarrow$} \verb!ok<#,ram>10 ! \vspace{7pt} \\
+\verb!decimal $0a! \fbox{$\hookleftarrow$} \verb!  ok<#,ram>10 ! \vspace{7pt} \\
 This time, the hexadecimal number was recognized and its value appears on the stack,
 which is printed (in base ten) after the prompt.
 To assist with the handling of numbers with many digits,
 FlashForth allows the convenience of embedding periods into the text of the number.
 This is most useful for binary numbers but it works generally. \vspace{7pt} \\
-\verb!hex ! \fbox{$\hookleftarrow$} \verb!ok<$,ram> ! \vspace{7pt} \\
-\verb!%0100.0000.0000.0000 ! \fbox{$\hookleftarrow$} \verb!ok<$,ram>4000 ! \vspace{7pt} \\
-\verb!$4000 ! \fbox{$\hookleftarrow$} \verb!ok<$,ram>4000 4000 ! \vspace{7pt} \\
-\verb!$4.0.0.0 ! \fbox{$\hookleftarrow$} \verb!ok<$,ram>4000 4000 4000 ! \vspace{7pt} \\
-\verb!$4. ! \fbox{$\hookleftarrow$} \verb!ok<$,ram>4000 4000 4000 4 0 ! \vspace{7pt} \\
-\verb!decimal ! \fbox{$\hookleftarrow$} \verb!ok<#,ram>16384 16384 16384 4 0 ! \vspace{7pt} \\
+\verb!hex! \fbox{$\hookleftarrow$} \verb!  ok<$,ram> ! \vspace{7pt} \\
+\verb!%0100.0000.0000.0000! \fbox{$\hookleftarrow$} \verb!  ok<$,ram>4000 ! \vspace{7pt} \\
+\verb!$4000! \fbox{$\hookleftarrow$} \verb!  ok<$,ram>4000 4000 ! \vspace{7pt} \\
+\verb!$4.0.0.0! \fbox{$\hookleftarrow$} \verb!  ok<$,ram>4000 4000 4000 ! \vspace{7pt} \\
+\verb!$4.! \fbox{$\hookleftarrow$} \verb!  ok<$,ram>4000 4000 4000 4 0 ! \vspace{7pt} \\
+\verb!decimal! \fbox{$\hookleftarrow$} \verb!  ok<#,ram>16384 16384 16384 4 0 ! \vspace{7pt} \\
 Note that the period after the number resulted in a double value being placed 
 on the stack as two (separate) items.
 
@@ -234,12 +234,12 @@ and then wait for new input. \vspace{7pt} \\
 \bigskip
 Finally, to show the compilation and use of a new word,
 here is the classic \textit{Hello World!} program. \vspace{7pt} \\
-\verb?: hey ." Hello, World!" ; ? \fbox{$\hookleftarrow$} \verb!ok<#,ram>! \vspace{7pt} \\
+\verb?: hey ." Hello, World!" ;? \fbox{$\hookleftarrow$} \verb!  ok<#,ram>! \vspace{7pt} \\
 Forth lets you output text using the word \verb!."! while the words \verb!:! and \verb!;!
 begin and end the definition of your own word \verb!hey!.
 Note that blank characters are used to delimit each of these words.
 Now, type in \verb!hey! and see what happens. \vspace{7pt} \\
-\verb!hey ! \fbox{$\hookleftarrow$} \verb?Hello, World! ok<#,ram>? \vspace{7pt}
+\verb!hey! \fbox{$\hookleftarrow$} \verb? Hello, World! ok<#,ram>? \vspace{7pt}
 
 
 \newpage
@@ -254,7 +254,7 @@ used to make new dictionary entries (\textit{i.e.} words).
 The most important are \verb!:! (start a new definition) and
 \verb!;! (terminate the definition).
 Let's try this out by typing: \vspace{7pt} \\
-\verb!: *+  *  +  ;! \fbox{$\hookleftarrow$} \verb!ok<#,ram>! \vspace{7pt} \\
+\verb!: *+  *  +  ;! \fbox{$\hookleftarrow$} \verb!  ok<#,ram>! \vspace{7pt} \\
 What happened?
 The action of ``:'' is to create a new dictionary entry named \verb!*+! and 
 switch from \textit{interpret} to \textit{compile} mode.
@@ -276,7 +276,7 @@ second, it switched back from compile mode to interpret mode.
 
 \medskip
 Now, try out your new word: \vspace{7pt} \\
-\verb!5 6 7 *+ . ! \fbox{$\hookleftarrow$} \verb!47 ok<#,ram>! \vspace{7pt} \\
+\verb!5 6 7 *+ .! \fbox{$\hookleftarrow$} \verb! 47 ok<#,ram>! \vspace{7pt} \\
 This example illustrated two principal activities of working in Forth:
 adding a new word to the dictionary, and trying it out as soon as it was defined.
 
@@ -316,7 +316,7 @@ each consisting of a number of cells that can hold 16-bit numbers.
 
 \medskip
 The Forth input line \vspace{7pt} \\
-\verb!decimal 2 5 73 -16 ! \fbox{$\hookleftarrow$} \vspace{7pt} \\
+\verb!decimal 2 5 73 -16! \fbox{$\hookleftarrow$} \vspace{7pt} \\
 leaves the parameter stack in the state\\
 \begin{center}
 \begin{tabular}{rrl}
@@ -337,7 +337,7 @@ becomes TOS and the left-most number sits at the bottom of the stack.
 
 \medskip
 Suppose that we followed the original input line with the line \vspace{7pt} \\
-\verb!+ - * . ! \fbox{$\hookleftarrow$} \vspace{7pt} \\
+\verb!+ - * .! \fbox{$\hookleftarrow$} \vspace{7pt} \\
 to produce a value  \textit{xxx}.
 What would the \textit{xxx} be?
 The operations would produce the successive stacks:
@@ -434,13 +434,15 @@ with the cell containing the least-significant 16-bits
 sitting below the cell containing the most-significant 16-bits. 
 The words for manipulating pairs of cells on the parameter stack are
 \verb!2dup!, \verb!2swap!, \verb!2over! and \verb!2drop!.
-For example, we can put a double value onto the stack by including a period
-in the number literal.\vspace{7pt} \\
-\verb!hex 23. ! \fbox{$\hookleftarrow$} \verb! ok<$,ram>23 0! \vspace{7pt} \\
+For example, we can put a double value onto the stack by putting a period
+as the last character of the number literal.\vspace{7pt} \\
+\verb!hex 23.! \fbox{$\hookleftarrow$} \verb!  ok<$,ram>23 0! \vspace{7pt} \\
 
 \medskip
-Note that memory on the PIC18 microcontrollers is limited and,
-for FlashForth, the parameter stack is limited to 48 cells.
+Memory on microcontrollers is limited and,
+for FlashForth on the PIC18, the parameter stack is limited to 26 cells.
+If you accumulate too many items on the stack, it will overflow and the interpreter will abort.
+The stack will be emptied and the interpreter will wait for further input.
 
 \medskip
 \subsection{The return stack and its uses}
@@ -476,7 +478,7 @@ and is used to get a copy of the loop counter in a \verb!for! loop
 discussed in Section\,\ref{sec:looping}. 
 
 
-\bigskip
+\newpage
 \section{Using memory}
 \label{sec:memory}
 %
@@ -515,22 +517,25 @@ is located at address \verb!$ff8a!
 and the corresponding tristate-control register at address \verb!$ff93!.
 We can set pin RB0 as an output pin by setting the corresponding bit in the 
 tristate control register to zero. \vspace{7pt} \\
-\verb?%11111110 $ff93 c! ? \fbox{$\hookleftarrow$} \verb! ok<$,ram>! \vspace{7pt} \\
+\verb?%1111.1110 $ff93 c!? \fbox{$\hookleftarrow$} \verb!  ok<$,ram>! \vspace{7pt} \\
 and then set the pin to a digital-high value by writing a 1 to the port's latch register \vspace{7pt} \\
-\verb?1 $ff8a c! ? \fbox{$\hookleftarrow$} \verb! ok<$,ram>! \vspace{7pt} \\
+\verb?1 $ff8a c!? \fbox{$\hookleftarrow$} \verb!  ok<$,ram>! \vspace{7pt} \\
 If we had a light-emitting diode attached to this pin, via a current-limiting resistor,
-we should now see it light up as in the companion hardware tutorial\,\cite{jacobs_2012b}.
-Here is what the gtkterm window contains after turning the LED on and off a couple of times.
+we should now see it light up as in the companion hardware tutorial\,\cite{jacobs_2016a}.
+Here is what the terminal window contains after turning the LED on and off a couple of times.
 \begin{verbatim}
-FlashForth V3.8
+warm 
+S FlashForth 5 PIC18F26K22 11.11.2016
 
-%11111110 $ff93 c!  ok<$,ram>
-1 $ff8a c!  ok<$,ram>
-0 $ff8a c!  ok<$,ram>
-1 $ff8a c!  ok<$,ram>
-0 $ff8a c!  ok<$,ram>
+%1111.1110 $ff93 c!  ok<#,ram>
+1 $ff8a c!  ok<#,ram>
+0 $ff8a c!  ok<#,ram>
+1 $ff8a c!  ok<#,ram>
+0 $ff8a c!  ok<#,ram>
 \end{verbatim}
-FlashForth allows you to very easily play with the hardware.
+Note that we started the exercise with a \textit{warm} restart so that the FlashForth
+environment was in a known good state.
+Being interactive, FlashForth allows you to play with the hardware very easily.
 
 
 \medskip
@@ -540,22 +545,27 @@ FlashForth allows you to very easily play with the hardware.
 A variable is a named location in memory that can store a number,
 such as the intermediate result of a calculation, off the stack.
 For example, \vspace{7pt} \\
-\verb?variable x ? \fbox{$\hookleftarrow$} \verb! ok<$,ram>! \vspace{7pt} \\
+\verb?variable x ? \fbox{$\hookleftarrow$} \verb! ok<#,ram>! \vspace{7pt} \\
 creates a named storage location, \verb!x!, which executes by leaving the address
 of its storage location as TOS: \vspace{7pt} \\
-\verb?x ? \fbox{$\hookleftarrow$} \verb! ok<$,ram>f170! \vspace{7pt} \\
+\verb?x ? \fbox{$\hookleftarrow$} \verb! ok<#,ram>61806! \vspace{7pt} \\
 We can then fetch from or store to this address as described in the previous section.
 \begin{verbatim}
-FlashForth V3.8
+empty warm 
+S FlashForth 5 PIC18F26K22 11.11.2016
 
-marker -play  ok<$,ram>
-variable x  ok<$,ram>
-3 x !  ok<$,ram>
-x @ . 3  ok<$,ram>
+marker -play  ok<#,ram>
+variable x  ok<#,ram>
+3 x !  ok<#,ram>
+x @ . 3  ok<#,ram>
 \end{verbatim}
 For FlashForth, the dictionary entry, \verb!x!, 
 is in the Flash memory of the microcontroller but the
 storage location for the number is in static RAM (in this instance).
+Note that the \verb!empty! word was used to discard all dictionary entries that
+we may have made on top of the base system.
+If you are unsure of what dictionary entries you have made, 
+use \verb!words! to display all current dictionary entries.
 
 \medskip
 FlashForth provides the words \verb!ram!, \verb!flash! and \verb!eeprom!
@@ -563,40 +573,20 @@ to change the memory context of the storage location.
 Being able to conveniently handle data spaces in different
 memory types is a major feature of FlashForth.
 To make another variable in EEPROM, try \vspace{7pt} \\
-\verb?eeprom variable y ? \fbox{$\hookleftarrow$} \verb! ok<$,eeprom>! \vspace{7pt} \\
+\verb?eeprom variable y? \fbox{$\hookleftarrow$} \verb! ok<#,eeprom>! \vspace{7pt} \\
 We can access this new (nonvolatile) variable as we did for the RAM variable \verb!x!,
 but \verb!y! retains its value, even when we turn off and on the power to the microcontroller.
 \begin{verbatim}
-4 y !  ok<$,eeprom>
-y @ . 4  ok<$,eeprom>
-x @ . 3  ok<$,eeprom>
-FlashForth V3.8
+4 y !  ok<#,eeprom>
+y @ . 4  ok<#,eeprom>
+x @ . 3  ok<#,eeprom>
 
-y @  ok<$,ram>4 
-x @  ok<$,ram>4 0 
+ FlashForth 5 PIC18F26K22 11.11.2016
+
+y @  ok<#,ram>4 
+x @  ok<#,ram>4 0 
 \end{verbatim}
-
-% \medskip
-% The dictionary entries for the variables may be removed with the word \verb!forget!
-% and the content of the dictionary checked by invoking \verb!words!.
-% \begin{verbatim}
-% words 
-% y	x	-play	count	in?	pick	?dup	blanks
-% erase	fill	forget	evaluate	-core	marker	
-% p2+	pc@	@p	d.	ud.	d>	d<	d=
-% << many lines removed >>
-% 
-% forget x  ok<$,ram>4 0 
-% words 
-% -play	count	in?	pick	?dup	blanks	erase	fill
-% forget	evaluate	-core	marker	
-% p2+	pc@	@p	d.	ud.	d>	d<	d=
-% << many more lines removed >>
-% \end{verbatim}
-% Note that the entries back to and including \verb!x! were removed.
-% Be aware that, even though the dictionary entries are gone,
-% the RAM and EEPROM memory locations allotted to \verb!x! and \verb!y!
-% are not recovered.
+In the example above, we reset the microcontroller by bringing its MCLR pin low for a moment.
 
 
 \medskip
@@ -606,19 +596,20 @@ x @  ok<$,ram>4 0
 A constant is a number that you would not want to change during a program's execution.
 The addresses of the microcontroller's special-function registers are a good example 
 of use and, because the constant numbers are stored in nonvolatile Flash memory, they are
-available even after a power cycle.
+available even after a hardware reset.
 The result of executing the word associated with a constant is the data value being left on the stack.
 \begin{verbatim}
-$ff93 con trisb  ok<$,ram> 
-$ff8a con latb  ok<$,ram>
-%11111110 trisb c!  ok<$,ram>
-0 latb c!  ok<$,ram>
-1 latb c!  ok<$,ram>
-0 latb c!  ok<$,ram>
-FlashForth V3.8
+$ff93 constant trisb  ok<#,ram> 
+$ff8a constant latb  ok<#,ram>
+%1111.1110 trisb c!  ok<#,ram>
+0 latb c!  ok<#,ram>
+1 latb c!  ok<#,ram>
+0 latb c!  ok<#,ram>
 
-trisb   ok<$,ram>ff93 
-%11111110 trisb c!  ok<$,ram>ff93 
+ FlashForth 5 PIC18F26K22 11.11.2016
+
+hex trisb   ok<$,ram>ff93 
+%1111.1110 trisb c!  ok<$,ram>ff93 
 0 latb c!  ok<$,ram>ff93 
 1 latb c!  ok<$,ram>ff93 
 \end{verbatim}
@@ -654,11 +645,15 @@ and attaching a convenient label to it.
 For example, the following transcript shows a new dictionary entry \verb!x! being created 
 and an extra 16 bytes of memory being allotted to it.
 \begin{verbatim}
+empty warm 
+S FlashForth 5 PIC18F26K22 11.11.2016
+
+hex  ok<$,ram>
 create x  ok<$,ram>
-x u. f178  ok<$,ram>
-here u. f178  ok<$,ram>
+x u. f16e  ok<$,ram>
+here u. f16e  ok<$,ram>
 10 allot  ok<$,ram>
-here u. f188  ok<$,ram>
+here u. f17e  ok<$,ram>
 \end{verbatim}
 When executed, the word \verb!x! will push the address of the first entry 
 in its allotted memory space onto the stack.
@@ -683,13 +678,14 @@ Finally, note that the memory context for this example has been the static RAM, 
 the context for allotting the memory can be changed.
 
 
-\bigskip
+\newpage
 \section{Comparing and branching}
 \label{sec:comparing-branching}
 %
 FlashForth lets you compare two numbers on the stack, using the relational
 operators \verb!>!, \verb!<! and \verb!=!.
 \begin{verbatim}
+hex  ok<$,ram>
 2 3 =  ok<$,ram>0 
 2 3 >  ok<$,ram>0 0 
 2 3 <  ok<$,ram>0 0 ffff 
@@ -707,12 +703,12 @@ which test if the TOS is zero and negative, respectively.
 
 \medskip
 The relational words are used for branching and control.
-For example,
+For example, after a warm restart, we can define the word \verb!test! and try it
 \begin{verbatim}
-: test 0= invert if cr ." Not zero!" then ;  ok<$,ram>
-0 test  ok<$,ram>
+: test 0= invert if cr ." Not zero!" then ;  ok<#,ram>
+0 test  ok<#,ram>
 -14 test 
-Not zero! ok<$,ram>
+Not zero! ok<#,ram>
 \end{verbatim}
 The TOS is compared with zero and the \verb!invert! operator (ones complement) flips
 all of the bits in the resulting flag.
@@ -724,16 +720,16 @@ The word \verb!cr! issues a carriage return (newline).
 \medskip
 The word \verb!else! can be used to provide an alternate path of execution as shown here.
 \begin{verbatim}
-: truth 0= if ." false" else ." true" then ;  ok<$,ram>
-1 truth true ok<$,ram>
-0 truth false ok<$,ram>
+: truth 0= if ." false" else ." true" then ;  ok<#,ram>
+1 truth true ok<#,ram>
+0 truth false ok<#,ram>
 \end{verbatim}
 A nonzero TOS causes words between the \verb!if! and \verb!else! to be executed,
 and the words between \verb!else! and \verb!then! to be skipped.
 A zero value produces the opposite behaviour.
 
 
-\bigskip
+\newpage
 \section{Comments in Forth code}
 \label{sec:commenting}
 %
@@ -758,7 +754,7 @@ Instructions to the user, clarifications of usage examples can be conveniently e
 in a block of text, with each line started by a backslash.
 
 
-\bigskip
+\newpage
 \section{Integer arithmetic operations}
 \label{sec:arithmetic}
 %
@@ -768,7 +764,7 @@ operate on 16-bit signed integers, in the range -32768 to +32767 (decimal).
 Note that the word \verb!u*/mod! (scale) uses a 32-bit intermediate result.
 FlashForth also provides arithmetic operators 
 for double numbers (32-bit integers), signed and unsigned.
-See the companion reference sheet \cite{jacobs_2012c} for a more complete list.
+See the companion reference sheet \cite{jacobs_2016b} for a more complete list.
 
 \begin{table}[htb]
  \caption{Arithmetic operators for single (16-bit) numbers.}
@@ -820,9 +816,10 @@ This operator uses a 32-bit intermediate result to avoid overflow.
 Note that not all of the arithmetic operators are part of the core FlashForth
 that is written in PIC18 assembly language and, to get the scale operator,
 you will need to load the \verb!math.txt! file of word definitions before
-trying this second example.  (See Appendix\,\ref{sec:math}.)
+trying this second example.
+This file is available in the common forth source directory of the FlashForth distribution.
 
-\bigskip
+\newpage
 \section{A little more on compiling}
 \label{sec:compile-mode}
 %
@@ -844,7 +841,7 @@ into the definition of \verb!feet!.
 At run-time, that data value will be placed onto the stack.
 
 
-\bigskip
+\newpage
 \section{Looping and structured programming}
 \label{sec:looping}
 %
@@ -921,7 +918,7 @@ marker -countdown
 \end{verbatim}
 
 
-\bigskip
+\newpage
 \section{More on defining words}
 \label{sec:more-defining-words}
 %
@@ -1134,7 +1131,7 @@ Although not evident in this example, \verb!JUMP_TABLE! allows more general key 
 than we could use in the basic array implementation for \verb!do-action!.
 We could, for example, build a jump table with a selection of character codes as the keys.
 
-\bigskip
+\newpage
 \section{Strings}
 %
 The \textit{Hello World!} program, back in Section\,\ref{sec:interpreter}
@@ -1181,7 +1178,7 @@ and the number of characters in it on the top of the stack.
 Note that, with FlashForth, double integers must be entered as literal values with the decimal point 
 as the last character.
 
-\bigskip
+\newpage
 \section{Forth programming style}
 %
 There is much written on the style of Forth programming and, indeed, there is book
@@ -1207,73 +1204,6 @@ to sections of this tutorial:
 
 \newpage
 \appendix
-\section{math.txt}
-\label{sec:math}
-%
-{\scriptsize
-\begin{verbatim}
-\ *********************************************************************
-\                                                                     *
-\    Filename:      math.txt                                          *
-\    Date:          14.9.2011   (11-Jun-2013 PJ edits from PZ)        *
-\    FF Version:    3.8                                               *
-\    Copyright:     Mikael Nordman                                    *
-\    Author:        Mikael Nordman                                    *
-\ *********************************************************************
-\    FlashForth is licensed acording to the GNU General Public License*
-\ *********************************************************************
-\ Double and mixed math words
-
-: m* ( n1 n2 -- d )  \ signed 16*16->32 multiply
-  2dup xor >r
-  abs swap abs um*
-  r> ?dnegate
-;
-
-: sm/rem ( d1 n1 -- n2 n3 )
-  2dup xor >r
-  over >r
-  abs >r dabs r> um/mod
-  swap r> ?negate
-  swap r> ?negate
-;
-
-: fm/mod ( d1 n1 -- n2 n3 )
-  dup >r
-  2dup xor >r
-  >r
-  dabs r@ abs um/mod
-  swap r> ?negate swap
-  r> 0< if
-    negate
-    over if
-      r@ rot - swap 1-
-    then
-  then
-  r> drop
-;
-
-: /mod ( n1 n2 -- n3 n4 )
-  >r s>d r> sm/rem
-;
-
-: mod ( n1 n2 -- n3 )
-  /mod drop
-;
-
-: */mod ( n1 n2 n3 -- n4 n5 )
-  >r m* r> sm/rem
-;
-
-: */ ( n1 n2 n3 -- quotient )
-  */mod swap drop
-;
-
-
-\end{verbatim}
-}
-
-\newpage
 \section{util38.txt}
 \label{sec:util38}
 %
