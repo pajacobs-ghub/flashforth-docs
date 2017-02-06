@@ -1003,7 +1003,7 @@ my-array @ .  -1  ok<#,ram>
 \end{verbatim}
 Here, \verb!my-array! is first allotted 10 bytes.
 At run time for \verb!my-array!, the address of the start of the 10 bytes is left on 
-the stack, and we use the \verb!fill! word (Appendix\,\ref{sec:util38}) 
+the stack, and we use the \verb!fill! word (found in the Forth source file \verb!core.txt!) 
 to completely fill the array of bytes with ones.
 Accessing the first cell (2 bytes) and printing it (to get \verb!-1! sent to the serial port)
 confirms that all bits are 1s.
@@ -1012,9 +1012,9 @@ It expects the starting address and number of bytes to dump sitting on the stack
 \begin{verbatim}
 hex  ok<$,ram>
 my-array $30 dump 
-f170 :ff ff ff ff ff ff ff ff ff ff 00 00 00 00 00 00 ................
-f180 :00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
-f190 :00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................ ok<$,ram>
+f174 :ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ................
+f184 :00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+f194 :00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................ ok<$,ram>
 \end{verbatim}
 Note that \verb!dump! works with blocks of 16 bytes and that the dots to the right
 show a character representation of the byte values.
@@ -1023,14 +1023,14 @@ This is convenient when trying to identify strings of text.
 \medskip
 It is also straight-forward to create an array with particular data compiled in.
 \begin{verbatim}
-create my-cell-array 100 , 340 , 5 ,  ok<#,ram>
+create my-cell-array 100 , 340 , 5 ,  ok<$,ram>
 \end{verbatim}
 Remember to use \verb!,! (comma) to compile in every data element, not leaving off the last one.
 At run time, \verb!my-cell-array! puts the address of the start of the associated memory
 on the stack and the address of the desired cell (index 2, in this case) 
 needs to be calculated (\verb!2 cells +!) before executing \verb!@! (fetch).
 \begin{verbatim}
-my-cell-array 2 cells + @ . 5  ok<#,ram>
+my-cell-array 2 cells + @ . 5  ok<$,ram>
 \end{verbatim}
 This address calculation code can be added into the defining word with \verb!does>!
 such that the subsequently defined my-cells array will have the snippet of code (\verb!swap cells +!)
@@ -1039,7 +1039,7 @@ executed at run time to convert from a cell index to an address.
 \ A defining word for creating arrays.
 : mk-cell-array ( u --) 
   create cells allot 
-  does> swap cells + ;  ok<#,ram>
+  does> swap cells + ;  ok<$,ram>
 \end{verbatim}
 The \verb!swap! is used to get the index as TOS with the array address as NOS,
 \verb!cells! scales the index to the offset as a number of bytes and \verb!+! adds the
@@ -1047,11 +1047,11 @@ offset to the array address.
 The newly computed cell address is left as TOS for use by the words \verb?!? (store) and \verb!@! (fetch). 
 \begin{verbatim}
 \ Make an array and access it.
-5 mk-cell-array my-cells  ok<#,ram>
-3000 0 my-cells !  ok<#,ram>
-3001 1 my-cells !  ok<#,ram>
-3002 2 my-cells !  ok<#,ram>
-1 my-cells @ . 3001  ok<#,ram>
+5 mk-cell-array my-cells  ok<$,ram>
+3000 0 my-cells !  ok<$,ram>
+3001 1 my-cells !  ok<$,ram>
+3002 2 my-cells !  ok<$,ram>
+1 my-cells @ . 3001  ok<$,ram>
 \end{verbatim}
 
 
