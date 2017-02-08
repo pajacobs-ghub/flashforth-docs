@@ -36,7 +36,7 @@
 %------------------------------------------------------------------
 
 \title{
-    Elements of FlashForth 5.
+    Elements of FlashForth\,5.
 }
 \author{
     Mechanical Engineering Report 2017/01\\
@@ -52,7 +52,7 @@
 
 \begin{abstract}
 This report is a remix of material from a number of Forth tutorials and references, 
-adapted to the FlashForth environment.
+adapted to the FlashForth\,5 environment.
 It provides some examples and explanation of using FlashForth on a PIC18 microcontroller
 while concentrating on the features of the language rather than the details of the
 microcontroller hardware.
@@ -74,7 +74,7 @@ Finally, strings and formatted numeric output are discussed.
 Forth is an interesting mix of low-level access tools and language building tools.
 It is effectively a small toolkit with which you construct a specialized dictionary of words
 that work together to form your application code.
-This tutorial will explore and explain the workings of the FlashForth toolkit
+This tutorial will explore and explain the workings of the FlashForth\,5 toolkit
 running on a Microchip PIC18 microcontroller
 and complements the more hardware-oriented tutorial \cite{jacobs_2016a},
 the FlashForth quick reference \cite{jacobs_2016b} and
@@ -174,7 +174,7 @@ In the example above, FlashForth interpreted 2 and 17 as numbers, and pushed the
 ``+'' is a predefined word, as is ``.'', so they are looked up and executed.
 The ``+'' (plus) word removed 2 and 17 from the stack, added them together, 
 and left the result 19 on the stack. 
-The word ``.'' (dot) removed 19 from the stack and sent it on the standard output device,
+The word ``.'' (dot) removed 19 from the stack and sent it to the standard output device,
 the serial port for FlashForth.
 Here is a picture of the stack through the process.
 The second-top element of the stack is labelled NOS for \textit{next on stack}.
@@ -193,9 +193,9 @@ The second-top element of the stack is labelled NOS for \textit{next on stack}.
 
 
 \medskip
-We might also work in hexadecimal, which was the default at power on: \vspace{7pt} \\
+We might also work in hexadecimal: \vspace{7pt} \\
 \verb!hex 0a 14 * .! \fbox{$\hookleftarrow$} \verb! c8 <$,ram>! \vspace{7pt} \\
-This default is probably convenient for most embedded systems work,
+This number base is probably convenient for most embedded systems work,
 where setting and monitoring bit patterns forms a large part of the code.
 If you want to explicitly indicate the base of a number, you can prepend a sigil to the
 digits of the number.
@@ -210,10 +210,10 @@ Note that the apparent hexadecimal number \verb!$0A! was not interpreted as such
 because of the case sensitivity of FlashForth. \vspace{7pt} \\
 \verb!decimal $0a! \fbox{$\hookleftarrow$} \verb!  ok<#,ram>10 ! \vspace{7pt} \\
 This time, the hexadecimal number was recognized and its value appears on the stack,
-which is printed (in base ten) after the prompt.
+which is printed (in base ten) after the \verb!ok! response.
 To assist with the handling of numbers with many digits,
 FlashForth allows the convenience of embedding periods into the text of the number.
-This is most useful for binary numbers but it works generally. \vspace{7pt} \\
+This is most useful for binary numbers, but it works generally. \vspace{7pt} \\
 \verb!hex! \fbox{$\hookleftarrow$} \verb!  ok<$,ram> ! \vspace{7pt} \\
 \verb!%0100.0000.0000.0000! \fbox{$\hookleftarrow$} \verb!  ok<$,ram>4000 ! \vspace{7pt} \\
 \verb!$4000! \fbox{$\hookleftarrow$} \verb!  ok<$,ram>4000 4000 ! \vspace{7pt} \\
@@ -354,7 +354,7 @@ The operations would produce the successive stacks:
  & \parbox[t]{30pt}{\rule{30pt}{2pt}} \\
  \end{tabular}
 \end{center}
-After both lines, the terminal window shows
+So, after both lines, the terminal window shows
 \begin{verbatim}
 decimal 2 5 73 -16  ok<#,ram>2 5 73 65520 
 + - * . -104  ok<#,ram>
@@ -764,7 +764,7 @@ operate on 16-bit signed integers, in the range -32768 to +32767 (decimal).
 Note that the word \verb!u*/mod! (scale) uses a 32-bit intermediate result.
 FlashForth also provides arithmetic operators 
 for double numbers (32-bit integers), signed and unsigned.
-See the companion reference sheet \cite{jacobs_2016b} for a more complete list.
+See the companion quick reference sheet \cite{jacobs_2016b} for a more complete list.
 
 \begin{table}[htb]
  \caption{Arithmetic operators for single (16-bit) numbers.}
@@ -869,7 +869,7 @@ If you \verb!exit! from a \verb!for! loop, you must drop the loop count with \ve
     {Loop while \textit{cond} is true, \textit{yyy} is not executed on the last iteration.} 
     \vspace{5pt} \\
   \textit{u} \verb!for! \textit{xxx} \verb!next! & Loop \textit{u} times. \vspace{5pt} \\
-  \verb!leave! & 
+  \verb!endit! & 
    \parbox{0.5\textwidth}
     {Sets loop counter to zero so that we leave the loop when \texttt{next} is encountered.} \vspace{5pt} \\
   \verb!exit! & \parbox{0.5\textwidth}{Exit from a word.} \vspace{5pt} \\
@@ -1138,9 +1138,9 @@ We could, for example, build a jump table with a selection of character codes as
 The \textit{Hello World!} program, back in Section\,\ref{sec:interpreter}
 could have been written a little differently, as the following transcript shows.
 \begin{verbatim}
-: hey2 s" Hello World!" cr type ;  ok<#,ram>
+: hey2 s" Hello, World!" cr type ;  ok<#,ram>
 hey2 
-Hello World! ok<#,ram>
+Hello, World! ok<#,ram>
 \end{verbatim}
 The word \verb!s"! compiles the string into Flash memory and, at run time,
 leaves the address of the string and the number of characters in the string
