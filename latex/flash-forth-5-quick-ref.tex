@@ -80,7 +80,7 @@ These are {\compileonly coloured blue}.
 
 
 \section{Data and the stack}
-The data stack (S:) is directly accessible and has 32 16-bit cells for holding numerical values.
+The data stack (S:) is directly accessible and has 16-bit cells for holding numerical values.
 Functions get their arguments from the stack and leave their results there as well.
 There is also a return address stack (R:) that can be used for temporary storage.
 
@@ -99,6 +99,7 @@ There is also a return address stack (R:) that can be used for temporary storage
 \verb!addr, addr1, addr2! & 16-bit addresses. \\
 \verb!a-addr! & cell-aligned address. \\
 \verb!c-addr! & character or byte address. \\
+\verb!addr.d! & 32-bit address. \\
 \end{tabular}
 
 \subsection{Numbers and values}
@@ -378,12 +379,22 @@ of the boot area and FF kernel.
 \verb!+!!  & Add n to cell at address. \verb!( n addr -- )! \\
 \verb!-@!  & Fetch from addr and decrement addr by 2. \\
            & \verb!( addr1 -- addr2 x )! \\
-\verb?cf!? & Store to Flash memory. \verb!( dataL dataH addr -- )! \\
-           & PIC24-30-33 only. \\
-\verb?cf@? & Fetch from Flash memory. \verb!( addr -- dataL dataH )! \\
-           & PIC24-30-33 only. \\
 \verb!>a!  & Write to the A register. \verb!( x -- )!\\
 \verb!a>!  & Read from the A register. \verb!( -- x )!\\
+\end{tabular}
+
+\medskip
+
+\subsection{Accessing Extended (Flash) Memory}
+\begin{tabular}{@{}ll@{}}
+\verb?x!?  & Store u to real flash address. \verb!( u addr.d -- )!\\
+           & PIC18, AVR8 \\
+\verb?x!?  & Store u to real flash address. \verb!( ud addr.d -- )!\\
+           & PIC24-30-33 \\
+\verb?x@?  & Fetch from real flash address. \verb!( addr.d -- u )! \\
+           & PIC18, AVR8 \\
+\verb?x@?  & Fetch from real flash address. \verb!( addr.d -- ud )! \\
+           & PIC24-30-33 \\
 \end{tabular}
 
 \medskip
@@ -420,7 +431,8 @@ The following come from \verb!bit.txt!
 \verb!forget! \textit{name}  & Forget dictionary entries back to \textit{name}. \\
 \verb!empty!  & Reset all dictionary and allotted-memory\\
               & pointers. \verb!( -- )! \\
-\verb!words!  & List words in dictionary. \verb!( -- )! \\
+\verb!words!  & List all words in dictionary. \verb!( -- )! \\
+\verb!words! \textit{xxx} & List words containing \textit{xxx}. \verb!( -- )! \\
 \end{tabular}
 
 \medskip
@@ -869,7 +881,7 @@ to define case constructs.\\
 \verb!?abort!  & If flag is false, print message \\
                & and abort. \verb!( f addr u -- )! \\
 \verb!?abort?!  & If flag is false, output ? and abort. \verb!( f -- )! \\
-{\compileonly\verb!abort"!}\verb! xxx"!  & if flag, type out last word executed, \\
+{\compileonly\verb!abort"!}\verb! xxx"!  & if flag is false, type out last word executed, \\
 		    & followed by text xxx. \verb!( f -- )! \\
 \verb!quit!  & Interpret from keyboard. \verb!( -- )! \\
 \end{tabular}\\
@@ -1713,6 +1725,7 @@ adjust the register settings in \verb!spi.init! to suit your particular device.
 
 This guide assembled by Peter Jacobs, School of Mechanical Engineering,
 The University of Queensland, February-2016 as Report 2016/02. \\
+Update 2017-03-28. \\
 It is a remix of material from the following sources:\\
 FlashForth v5.0 source code and word list by Mikael Nordman \\
 http://flashforth.sourceforge.net/ \\
