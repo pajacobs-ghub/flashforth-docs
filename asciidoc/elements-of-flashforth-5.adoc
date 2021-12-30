@@ -569,13 +569,187 @@ discussed in the section on looping.
 
 = Using memory
 
+As well as static RAM, the PIC18 microcontroller has program memory, or Flash memory,
+and also EEPROM.
+Static RAM is usually quite limited on PIC18 controllers and the data stored there is
+lost if the MCU loses power.
+The key attribute of RAM is that it has an unlimited endurance for being rewritten.
+The Flash program memory is usually quite a bit larger and is retained, 
+even with the power off.
+It does, however, have a very limited number of erase-write cycles that it can endure.
+EEPROM is also available, in even smaller amounts than static RAM and is non-volatile.
+It has a much better endurance than Flash, but any particular cell 
+is still limited to about 100000 rewrites.
+It is a good place to put variables that you change occasionally but 
+must retain when the power is off.
+Calibration or configuration data may be an example of the type of data 
+that could be stored in EEPROM.
+The registers that configure, control and monitor the microcontroller's peripheral devices 
+appear as particular locations in the static RAM memory.
+
+In FlashForth, 16-bit numbers are fetched from memory to the stack by the word `@` (fetch)
+and stored from TOS to memory by the word `!` (store).
+`@` expects an address on the stack and replaces the address by its contents.
+`!` expects a number (NOS) and an address (TOS) to store it in.
+It places the number in the memory location referred to by the address, 
+consuming both parameters in the process.
+
+Unsigned numbers that represent 8-bit (byte) values can be placed in character-sized cells
+of memory using `c@` and `c!`.
+This is convenient for operations with strings of text, but is especially useful
+for handling the microcontroller's peripheral devices via their special-function
+file registers.
+For example, data-latch register for port B digital input-output 
+is located at address `$ff8a` 
+and the corresponding tristate-control register at address `$ff93`.
+We can set pin RB0 as an output pin by setting the corresponding bit in the 
+tristate control register to zero. +
+`%1111.1110 $ff93 c!` &#x23CE; `ok<$,ram>` +
+and then set the pin to a digital-high value by writing a 1 to the port's latch register +
+`1 $ff8a c!` &#x23CE; `ok<$,ram>` +
+If we had a light-emitting diode attached to this pin, via a current-limiting resistor,
+we should now see it light up as in the companion hardware tutorial.
+Here is what the terminal window contains after turning the LED on and off a couple of times.
+----
+warm 
+S FlashForth 5 PIC18F26K22 11.11.2016
+
+%1111.1110 $ff93 c!  ok<#,ram>
+1 $ff8a c!  ok<#,ram>
+0 $ff8a c!  ok<#,ram>
+1 $ff8a c!  ok<#,ram>
+0 $ff8a c!  ok<#,ram>
+----
+Note that we started the exercise with a _warm_ restart so that the FlashForth
+environment was in a known good state.
+Being interactive, FlashForth allows you to play with the hardware very easily.
+
+
 == Variables
+
+A variable is a named location in memory that can store a number,
+such as the intermediate result of a calculation, off the stack.
+For example, +
+`variable x` &#x23CE; `ok<#,ram>` +
+creates a named storage location, `x` which executes by leaving the address
+of its storage location as TOS: +
+`x` &#x23CE; `ok<#,ram>61806` +
+We can then fetch from or store to this address as described in the previous section.
+----
+empty warm 
+S FlashForth 5 PIC18F26K22 11.11.2016
+
+marker -play  ok<#,ram>
+variable x  ok<#,ram>
+3 x !  ok<#,ram>
+x @ . 3  ok<#,ram>
+----
+For FlashForth, the dictionary entry, `x`, 
+is in the Flash memory of the microcontroller but the
+storage location for the number is in static RAM (in this instance).
+Note that the `empty` word was used to discard all dictionary entries that
+we may have made on top of the base system.
+If you are unsure of what dictionary entries you have made, 
+use `words` to display all current dictionary entries.
+
+FlashForth provides the words `ram`, `flash` and `eeprom`
+to change the memory context of the storage location.
+Being able to conveniently handle data spaces in different
+memory types is a major feature of FlashForth.
+To make another variable in EEPROM, try +
+`eeprom variable y` &#x23CE; `ok<#,eeprom>` +
+We can access this new (nonvolatile) variable as we did for the RAM variable `x`,
+but `y` retains its value, even when we turn off and on the power to the microcontroller.
+----
+4 y !  ok<#,eeprom>
+y @ . 4  ok<#,eeprom>
+x @ . 3  ok<#,eeprom>
+
+ FlashForth 5 PIC18F26K22 11.11.2016
+
+y @  ok<#,ram>4 
+x @  ok<#,ram>4 0 
+----
+In the example above, we reset the microcontroller by bringing its MCLR pin low for a moment.
 
 == Constants
 
+A constant is a number that you would not want to change during a program's execution.
+The addresses of the microcontroller's special-function registers are a good example 
+of use and, because the constant numbers are stored in nonvolatile Flash memory, they are
+available even after a hardware reset.
+The result of executing the word associated with a constant is the data value being left on the stack.
+----
+$ff93 constant trisb  ok<#,ram> 
+$ff8a constant latb  ok<#,ram>
+%1111.1110 trisb c!  ok<#,ram>
+0 latb c!  ok<#,ram>
+1 latb c!  ok<#,ram>
+0 latb c!  ok<#,ram>
+
+ FlashForth 5 PIC18F26K22 11.11.2016
+
+hex trisb   ok<$,ram>ff93 
+%1111.1110 trisb c!  ok<$,ram>ff93 
+0 latb c!  ok<$,ram>ff93 
+1 latb c!  ok<$,ram>ff93 
+----
+
 == Values
 
+A `value` is a hybrid type of variable and constant.
+We define and initialize a value and invoke it as as we would for a constant.
+We can also change a value as we can a variable.
+----
+decimal  ok<#,ram>
+13 value thirteen  ok<#,ram>
+thirteen  ok<#,ram>13 
+47 to thirteen  ok<#,ram>13 
+thirteen  ok<#,ram>13 47 
+----
+The word `to` also works within word definitions, replacing the value that
+follows it with whatever is currently in TOS.
+You must be careful that `to` is followed by a value and not something else.
+
+
 == Basic tools for allocating memory
+
+The words `create` and `allot` are the basic tools for setting aside memory
+and attaching a convenient label to it.
+For example, the following transcript shows a new dictionary entry `x` being created 
+and an extra 16 bytes of memory being allotted to it.
+----
+empty warm 
+S FlashForth 5 PIC18F26K22 11.11.2016
+
+hex  ok<$,ram>
+create x  ok<$,ram>
+x u. f16e  ok<$,ram>
+here u. f16e  ok<$,ram>
+10 allot  ok<$,ram>
+here u. f17e  ok<$,ram>
+----
+When executed, the word `x` will push the address of the first entry 
+in its allotted memory space onto the stack.
+The word `u.` prints an unsigned representation of a number and 
+the word `here` returns the address of the next available space in memory.
+In the example above, it starts with the same value as `x` but is incremented 
+by (decimal) sixteen when we allotted the memory.
+
+We can now access the memory allotted to `x` using the fetch and store words 
+discussed earlier, in the section on memory.
+To compute the address of the third byte allotted to `x` we could say `x 2 +`,
+remembering that indices start at 0.
+----
+30 x 2 + c!  ok<$,ram>
+x 2 + c@  ok<$,ram>30 
+----
+We will discuss a way to neatly package the snippets of code required to do the address
+calculation later, in the section on creating arrays.
+Finally, note that the memory context for this example has been the static RAM, however, 
+(as shown for variables in the section on variables)
+the context for allotting the memory can be changed.
+
 
 = Comparing and branching
 
