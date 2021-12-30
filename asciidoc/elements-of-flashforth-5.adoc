@@ -1004,15 +1004,258 @@ marker -countdown
 
 = More on defining words
 
+The compiler word `create` makes a new dictionary entry 
+using the next name in the input stream and compiles the pointer value 
+of the first free location of the current data-space context.
+When executed, the new dictionary entry leaves that pointer value on the stack.
+
+`create` can be used to build other defining words.
+For example, we can make our own variation of word `variable` as
+----
+: make-var create 1 cells allot ;  ok<#,ram>
+----
+Here `make-var` can be used to make an uninitialized variable that can hold a single number.
+When `make-var` is executed, the first word within its definition (`create`)
+sets up a dictionary entry with the name coming from the next text in the input stream
+(`alpha` in the example below),
+the number 1 is pushed onto the stack, the word `cells` converts the TOS to the 
+appropriate number of bytes (2 in this case) and the word `allot` increments
+the pointer to the next available space in memory by this number of bytes.
+This allots one cell to the newly created _child_ word.
+----
+make-var alpha  ok<#,ram>
+13 alpha !  ok<#,ram>
+alpha @ . 13  ok<#,ram>
+----
+At run time for the newly created _child_ word, `alpha` leaves its data-space address 
+on the stack and we may store to or fetch from this address, as shown above.
+
+As a second example, we can also build a defining word for making initialized variables.
+----
+: make-zero-var create 0 , ;  ok<#,ram>
+----
+Instead of just allotting space for the data,
+the word `,` (comma) puts TOS into the next cell of memory and increments
+the memory-space pointer by appropriate number of bytes.
+Run time use of the newly defined variable is the same as for any other variable.
+----
+make-zero-var beta  ok<#,ram>
+beta @ . 0  ok<#,ram>
+----
+
 == create ... does&gt; ...
+
+The word `does>` is used to specify a run-time action for the child words of
+a defining word.
+We can make our own variant of `constant` and test it.
+----
+: make-con create , does> @ ;  ok<#,ram>
+53 make-con prime  ok<#,ram>
+----
+At run time for the defining word `make-con`, 
+create sets up the new dictionary entry with the 
+next text in the input stream (`prime`), the word `,` (comma) compiles TOS 
+(53 in this example) into the memory-space of the new child word and 
+`does>` stores the following words up to the terminating
+semicolon (only `@` in this case), such that they will be executed at the run time
+of the child word defined by `make-con`.
+Thus, when `prime` is executed, the address of the first entry in its data-space 
+is put onto the stack and the word `@` executed.
+----
+prime . 53  ok<#,ram>
+----
+Although only one word is stored as the run time code for `prime` in this example, 
+it could be arbitrarily complex.
 
 == Creating arrays
 
+The `create` ... `does>` pair can be used to define some convenient 
+array-defining words.
+For an array of bytes, it is straight-forward to manually allot the
+memory and address it at run time.
+----
+create my-array 10 allot  ok<#,ram>
+my-array 10 $ff fill  ok<#,ram>
+my-array @ .  -1  ok<#,ram>
+----
+Here, `my-array` is first allotted 10 bytes.
+At run time for `my-array`, the address of the start of the 10 bytes is left on 
+the stack, and we use the `fill` word (found in the Forth source file `core.fs`) 
+to completely fill the array of bytes with ones.
+Accessing the first cell (2 bytes) and printing it (to get `-1` sent to the serial port)
+confirms that all bits are 1s.
+The word `dump` can be used to get a more complete picture.
+It expects the starting address and number of bytes to dump sitting on the stack.
+----
+hex  ok<$,ram>
+my-array $30 dump 
+f174 :ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ................
+f184 :00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+f194 :00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................ ok<$,ram>
+----
+Note that `dump` works with blocks of 16 bytes and that the dots to the right
+show a character representation of the byte values.
+This is convenient when trying to identify strings of text.
+
+It is also straight-forward to create an array with particular data compiled in.
+----
+create my-cell-array 100 , 340 , 5 ,  ok<$,ram>
+----
+Remember to use `,` (comma) to compile in every data element, not leaving off the last one.
+At run time, `my-cell-array` puts the address of the start of the associated memory
+on the stack and the address of the desired cell (index 2, in this case) 
+needs to be calculated (`2 cells +`) before executing `@` (fetch).
+----
+my-cell-array 2 cells + @ . 5  ok<$,ram>
+----
+This address calculation code can be added into the defining word with `does>`
+such that the subsequently defined my-cells array will have the snippet of code 
+(`swap cells +`) executed at run time to convert from a cell index to an address.
+----
+\ A defining word for creating arrays.
+: mk-cell-array ( u --) 
+  create cells allot 
+  does> swap cells + ;  ok<$,ram>
+----
+The `swap` is used to get the index as TOS with the array address as NOS,
+`cells` scales the index to the offset as a number of bytes and `+` adds the
+offset to the array address.
+The newly computed cell address is left as TOS for use by the words `!` (store) and `@` (fetch). 
+----
+\ Make an array and access it.
+5 mk-cell-array my-cells  ok<$,ram>
+3000 0 my-cells !  ok<$,ram>
+3001 1 my-cells !  ok<$,ram>
+3002 2 my-cells !  ok<$,ram>
+1 my-cells @ . 3001  ok<$,ram>
+----
+
+
 == Jump tables
+
+Sometimes we want to execute one of a large selection of words, 
+depending on the outcome of a calculation.
+It is possible to set up a sequence of tests and branches 
+(as introduced in the section on comparing and branching), 
+however, FlashForth allows a neater
+solution in the form of a _jump table_.
+A word in FlashForth can be executed by feeding its _execution token_
+to the word `execute`.
+If you have a table of execution tokens, then you need only look up the 
+one corresponding to a given index, fetch it and say `execute`.
+The following transcript shows such a jump-table for a collection of four functions,
+the word `do-action` to execute the appropriate word, given an index,
+and a sample of trials that shows the jump-table mechanism in action.
+----
+\ Set up the words that we want to selectively execute.
+: ring  ( --) ." ring ring" ;  ok<#,ram>
+: open  ( --) ." opening" ;  ok<#,ram>
+: laugh ( --) ." ha ha" ;  ok<#,ram>
+: cry   ( --) ." crying" ;   ok<#,ram>
+
+\ Store the execution tokens in a table that allots into flash memory.
+flash  ok<#,flash>
+create actions ' ring , ' open , ' laugh , ' cry ,  ok<#,flash>
+ram  ok<#,ram>
+
+: do-action ( n --) 
+  0 max 3 min 
+  cells actions + @ execute ;  ok<#,ram>
+
+\ Call up the actions.
+3 do-action crying ok<#,ram>
+0 do-action ring ring ok<#,ram>
+2 do-action ha ha ok<#,ram>
+5 do-action crying ok<#,ram>
+----
+The word `'` (tick) finds the following name in the dictionary and
+puts its execution token (xt) on the stack.  
+The word `,` (comma) compiles the xt into the table.
+Note that we are compiling these tokens into the flash memory of the microcontroller
+so that the jump table continues to work, even after a power break.
+In `do-action`, the words `0 max 3 min` limit the incoming index value to 
+the valid range for looking up a token in the jump-table.
+The token is fetched to TOS and then `execute` called.
+The final line of the transcript shows that the word `cry` is executed for
+the invalid index value of 5.
+You may want to handle incorrect input differently in your application.
+
+The FlashForth distribution comes with a file, `jmptbl.fs` 
+(in the common forth source code directory),
+that provides set of words for building jump tables.
+With these words, we can build a second jump table with a neater notation.
+----
+flash
+JUMP_TABLE do-action-2
+  0 | ring
+  1 | open
+  2 | laugh 
+  3 | cry
+  default| cry
+ram
+----
+Note that, in the code above, we have omitted the FlashForth response on each line.
+This new jump table gives essentially the same behaviour as the first one.
+----
+\ Call up the actions.  ok<$,ram>
+3 do-action-2 crying ok<$,ram>
+0 do-action-2 ring ring ok<$,ram>
+2 do-action-2 ha ha ok<$,ram>
+5 do-action-2 crying ok<$,ram>
+----
+Although not evident in this example, `JUMP_TABLE` allows more general key values
+than we could use in the basic array implementation for `do-action`.
+We could, for example, build a jump table with a selection of character codes as the keys.
 
 = Strings
 
+The _Hello World!_ program, back in the section on the interpreter,
+could have been written a little differently, as the following transcript shows.
+----
+: hey2 s" Hello, World!" cr type ;  ok<#,ram>
+hey2 
+Hello, World! ok<#,ram>
+----
+The word `s"` compiles the string into Flash memory and, at run time,
+leaves the address of the string and the number of characters in the string
+on the stack.
+Using this information, the word `type` will send the characters to the standard output. 
+
 == Pictured numeric output
+
+// Note the need to escape the # for the word #s
+
+To get numbers output in a particular format, FlashForth provides
+the basic words `#`, `<#`, `\#s`, `#>`, `sign` and `hold`.
+These words are intended for use within word definitions.
+Here is an example of their use.
+----
+: (d.2) ( d -- caddr u) 
+  tuck dabs <# # # [char] . hold #s rot sign #> ;  ok<#,ram>
+----
+A double number sits on the stack, with it most significant bits, including its sign, in TOS.
+First, `tuck` copies TOS (with the sign bit) to below the double number and 
+then the absolute value is converted to a string of characters representing the unsigned
+value.
+Starting with the least significant digits, there will be two to the right of a decimal point.
+The phrase `[char] . hold` adds the decimal point to the string.
+In this phrase, `[char] .` builds in the representation of the decimal point 
+as a numeric literal
+(ASCII code 46) and `hold` then adds it to the string under construction.
+After adding the decimal point, the word `\#s` converts as many remaining digits as required.
+The word `rot` is used to bring the copy of the original most-significant cell to TOS
+and the word `sign` adds a negative sign to the string if required.
+Finally, word `#>` finishes the conversion, 
+leaving the character-address of the resultant string 
+and the number of characters in it on the top of the stack.
+----
+437658. (d.2) type 4376.58 ok<#,ram>
+-437699. (d.2) type -4376.99 ok<#,ram>
+45. (d.2) type 0.45 ok<#,ram>
+----
+Note that, with FlashForth, double integers must be entered as literal values 
+with the decimal point as the last character.
+
 
 = Forth programming style
 
