@@ -1,0 +1,270 @@
+= Elements of FlashForth 5
+Peter Jacobs, Pete Zawasky and Mikael Nordman
+2021-12-30
+:toc: right
+:stylesheet: ./readthedocs.css
+:sectnums:
+:imagesdir: ../figs
+:stem: latexmath
+:eqnums:
+
+This document is a remix of material from a number of Forth tutorials and references, 
+adapted to the FlashForth 5 environment.
+It provides some examples and explanation of using FlashForth on a PIC18 microcontroller
+while concentrating on the features of the language rather than the details of the
+microcontroller hardware.
+Following an introduction to the FlashForth interpreter, 
+we look at adding our own word definitions to the dictionary and then explore
+the manipulation of data values on the stack.
+Flow of program control and more advanced defining words are also explored.
+These defining words are convenient for making arrays.
+Finally, strings and formatted numeric output are discussed.
+
+:leveloffset: +1
+
+= Introduction
+
+Forth is an interesting mix of low-level access tools and language building tools.
+It is effectively a small toolkit with which you construct a specialized dictionary of words
+that work together to form your application code.
+This tutorial will explore and explain the workings of the FlashForth 5 toolkit
+running on a Microchip PIC18 microcontroller
+and complements the more hardware-oriented tutorial,
+the FlashForth quick reference and the https://flashforth.com[FlashForth website].
+Our interest is in using Forth on the microcontroller in an embedded system,
+such as a special-purpose signal timing device,
+rather than as part of a general-purpose calculation on a personal computer.
+
+There are quite a number of 
+good introductory tutorials^<<brodie_1987,1>>,<<noble_2001,4>>^, 
+course notes^<<pelc_2011,5>>^, and references^<<conklin_2007,3>>^ 
+for programming in Forth on a desktop or laptop computer,
+however, FlashForth running on a PIC18 microcontroller is a different environment.
+In the following sections, 
+we will follow closely J.V. Noble's tutorial^<<noble_2001,4>>^
+for using Forth on a personal computer,
+reusing many of his examples and explanations verbatim, 
+while adapting the overall tutorial to the use of FlashForth on a microcontroller.
+
+= Getting started
+
+Although we will be using FlashForth on a PIC18 microcontroller, we communicate with it
+using a serial terminal program running on a personal computer.
+FlashForth comes with a couple of terminal programs (in Python and Tcl/Tk)
+that have some conveniences when sending files to the microcontroller,
+so we will start our interaction with one of those.
+Starting the `ff-shell.tcl` program in a normal terminal window
+will start up the Tcl/Tk shell program.
+Pressing the `Enter` key &#x23CE; a couple of times should get the display 
+as shown in Figure 1.
+The `ok<#,ram>` prompt indicates that the current base is ten,
+for representing numbers in decimal format, 
+and that the current context for making variables is static RAM, 
+rather than the Flash memory and EEPROM that is also available in the microcontroller.
+
+.Opening screen using `ff-shell.tcl`.
+[#opening_screen]
+image::ff5-start-screen-ff-shell-tcl.png[width=80%]
+
+In contrast to Forth on a PC, FlashForth is case sensitive,
+with most predefined words being spelled with lower case.
+Also, being intended for use in an embedded system, there is no command to exit the system.
+FlashForth only stops when the power is removed or a reset occurs.
+
+= The interpreter
+
+FlashForth is an interactive programming language consisting of _words_.
+Forth words are the equivalent of subroutines or functions in other languages and are
+executed by naming them.
+Although FlashForth is interactive at its core, the user doesn't need to
+interact with an embedded application if its top-level word is set to automatically
+execute at power-up.
+
+Here is an example of executing a FlashForth word: +
+`hex` &#x23CE;  `ok<$,ram>` +
+This executes the word that sets the base for representing numbers to 16, 
+a format that you are likely to be familiar with
+if you are a student of mechatronics or computing.
+Note that both the text that your typed and the FlashForth response is shown
+together, on either side of the `Enter` symbol &#x23CE;.
+For the moment, let's return to using decimal numbers: +
+`decimal` &#x23CE; `  ok<#,ram>`
+
+Now, let's try something a bit more interesting by entering: +
+`2 17 + .` &#x23CE; `19 <#,ram>` +
+This time FlashForth more clearly shows its interpretive nature.
+A small program called the _outer interpreter_ continually loops,
+waiting for input from the serial port.
+The input is a sequence of text strings (words or numbers) separated from each other
+by the standard Forth delimiter, one or more ASCII blank characters.
+
+The text strings are interpreted in only three ways: words (subroutine or function names),
+numbers, or _not defined_.
+The outer interpreter tries first to look for the incoming word in the _dictionary_
+that contains the already defined words.
+If it finds the word, it executes the corresponding code.
+
+If no dictionary entry exists, the interpreter tries to read the input as a number.  
+If the string satisfies the rules for defining a number, it is converted to a number
+in the microcontroller's internal representation, and stored in a special memory location,
+called the _top of stack_ (`TOS`).
+
+In the example above, FlashForth interpreted 2 and 17 as numbers,
+and pushed them onto the stack.
+`+` is a predefined word, as is `.`, so they are looked up and executed.
+The `+` (plus) word removed `2` and `17` from the stack, added them together, 
+and left the result `19` on the stack. 
+The word `.` (dot) removed `19` from the stack and sent it to the standard output device,
+the serial port for FlashForth.
+Here is a picture of the stack through the process.
+The second-top element of the stack is labelled `NOS` for _next on stack_. +
+[cols=6,options="header"]
+|===
+| word executed 
+|
+| `2`
+| `17`
+| `+`
+| `.`
+
+| stack result
+| `TOS`
+| `2`
+| `17`
+| `19`
+| &#x23B5;
+
+|
+| `NOS`
+| &#x23B5;
+| `2`
+| &#x23B5;
+|
+
+|
+|
+|
+| &#x23B5;
+|
+|
+|===
+
+We might also work in hexadecimal: +
+`hex 0a 14 * .` &#x23CE; `c8 <$,ram>` +
+This number base is probably convenient for most embedded systems work,
+where setting and monitoring bit patterns forms a large part of the code.
+If you want to explicitly indicate the base of a number, you can prepend a sigil to the
+digits of the number.
+For example, `$10`, `#16` and `%10000` all represent the decimal value sixteen.
+
+If the incoming text cannot be located in the dictionary nor interpreted as a number,
+FlashForth issues an error message. +
+`$0A` &#x23CE; `$0A ?` +
+`thing` &#x23CE; `thing ?` +
+Note that the apparent hexadecimal number `$0A` was not interpreted as such 
+because of the case sensitivity of FlashForth. +
+`decimal $0a` &#x23CE; `ok<#,ram>10` +
+This time, the hexadecimal number was recognized and its value appears on the stack,
+which is printed (in base ten) after the `ok` response.
+To assist with the handling of numbers with many digits,
+FlashForth allows the convenience of embedding periods into the text of the number.
+This is most useful for binary numbers, but it works generally. +
+`hex` &#x23CE; `ok<$,ram>` +
+`%0100.0000.0000.0000` &#x23CE; `ok<$,ram>4000` +
+`$4000` &#x23CE; `ok<$,ram>4000 4000` +
+`$4.0.0.0` &#x23CE; `ok<$,ram>4000 4000 4000` +
+`$4.` &#x23CE; `ok<$,ram>4000 4000 4000 4 0` +
+`decimal` &#x23CE; `ok<#,ram>16384 16384 16384 4 0` +
+Note that the period after the number resulted in a double value being placed 
+on the stack as two (separate) items.
+
+Other error messages that you might see include `SP ?`, for a stack pointer error, 
+and `CO ?`, for a context error.
+If the word {asterisk} was to be executed without there being at least two numbers sitting 
+on the stack, the interpreter would abort, issuing the `SP` error message, 
+and then wait for new input. +
+`*` &#x23CE; `ok<#,ram> SP?` 
+
+Finally, to show the compilation and use of a new word,
+here is the classic _Hello World!_ program. +
+`: hey ." Hello, World!" ;` &#x23CE; `ok<#,ram>` +
+Forth lets you output text using the word `."` while the words `:` and `;`
+begin and end the definition of your own word `hey`.
+Note that blank characters are used to delimit each of these words.
+Now, type in `hey` and see what happens. +
+`hey` &#x23CE; `Hello, World! ok<#,ram>`
+
+= Extending the dictionary
+
+== Dictionary management
+
+= Stacks and reverse Polish notation
+
+== Manipulating the parameter stack
+
+== The return stack and its uses
+
+= Using memory
+
+== Variables
+
+== Constants
+
+== Values
+
+== Basic tools for allocating memory
+
+= Comparing and branching
+
+= Comments in Forth code
+
+= Integer arithmetic operations
+
+= A little more on compiling
+
+= Looping and structured programming
+
+= More on defining words
+
+== create ... does&gt; ...
+
+== Creating arrays
+
+== Jump tables
+
+= Strings
+
+== Pictured numeric output
+
+= Forth programming style
+
+There is much written on the style of Forth programming and, indeed, there is book
+called "Thinking Forth".^<<brodie_2004,2>>^
+Here are a number of recurring statements on programming in Forth that are relevant
+to sections of this tutorial:
+
+- Build your application from the bottom up, testing new words as you go.
+- Choose simple and meaningful names, so that the intent of each word is clear
+  and your code is easily read, almost as statements you would make to another person.
+- Always provide stack-effect comments.
+- As you build your application, refactor your code aggressively so that you
+  don't need complicated stack manipulations to access your data.
+- Clean up after yourself and don't leave rubbish on the stack.
+- Use the return-stack for temporary storage when it makes your code cleaner
+  but be very careful to clean up when doing so.
+
+
+[bibliography]
+= References
+
+* [[[brodie_1987,1]]] Brodie, L. and Forth Inc. (1987) Starting Forth: An introduction to the Forth Language and operating system for beginners and professionals, 2nd Ed. _Prentice Hall_  ISBN 0-13-843079-9. Also, updated and online http://home.iae.nl/users/mhx/sf.html and the official online version http://www.forth.com/starting-forth/
+
+* [[[brodie_2004,2]]] Brodie, L. (2004) Thinking Forth: A Language and Philosophy for Solving Problems. _Punchy Publishing_ ISBN 0976458705. Also online http://thinking-forth.sourceforge.net/
+
+* [[[conklin_2007,3]]] Conklin, E. K. and Rather, E. D. (2007) Forth Programmer's Handbook, 3rd Ed. _Forth Inc._ ISBN 1-4196-7549-4
+
+* [[[noble_2001,4]]] Noble, J. V. (2001) A Beginner's Guide to Forth, http://galileo.phys.virginia.edu/classes/551.jvn.fall01/primer.htm
+
+* [[[pelc_2011,5]]] Pelc, S. (2011). Programming Forth. _Microprocessor Engineering Limited_, ISBN 978-0-9525310-5-0.  http://www.mpeforth.com/
+
+
