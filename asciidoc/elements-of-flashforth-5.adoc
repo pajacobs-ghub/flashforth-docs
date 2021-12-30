@@ -753,13 +753,254 @@ the context for allotting the memory can be changed.
 
 = Comparing and branching
 
+FlashForth lets you compare two numbers on the stack, using the relational
+operators `>`, `<` and `=`.
+----
+hex  ok<$,ram>
+2 3 =  ok<$,ram>0 
+2 3 >  ok<$,ram>0 0 
+2 3 <  ok<$,ram>0 0 ffff 
+. -1  ok<$,ram>0 0 
+----
+These operators consume both arguments and leave a _flag_, 
+to represent the boolean result.
+Above, we see that "2 is equal to 3" is false (value 0),
+"2 is greater than 3" is also false, while
+"2 is less than 3" is true.
+The true flag has all bits set to 1, hence the 16-bit hexadecimal representation `ffff`
+and the corresponding signed representation `-1`.
+FlashForth also provides the relational operators `0=` and `0<`
+which test if the TOS is zero and negative, respectively.
+
+The relational words are used for branching and control.
+For example, after a warm restart, we can define the word `test` and try it
+----
+: test 0= invert if cr ." Not zero!" then ;  ok<#,ram>
+0 test  ok<#,ram>
+-14 test 
+Not zero! ok<#,ram>
+----
+The TOS is compared with zero and the `invert` operator (ones complement) flips
+all of the bits in the resulting flag.
+If TOS is nonzero, the word `if` consumes the flag and executes all of the words
+between itself and the terminating `then`.
+If TOS is zero, execution jumps to the word following the `then`.
+The word `cr` issues a carriage return (newline).
+
+The word `else` can be used to provide an alternate path of execution as shown here.
+----
+: truth 0= if ." false" else ." true" then ;  ok<#,ram>
+1 truth true ok<#,ram>
+0 truth false ok<#,ram>
+----
+A nonzero TOS causes words between the `if` and `else` to be executed,
+and the words between `else` and `then` to be skipped.
+A zero value produces the opposite behaviour.
+
 = Comments in Forth code
+
+The word `(` -- a left parenthesis followed by a space -- 
+says "disregard all following text until the next right parenthesis 
+or end-of-line in the input stream".
+Thus we can add explanatory comments to colon definitions.
+
+Stack comments are a particular form of parenthesized remark which describes
+the effect of a word on the stack.
+For example the comment `( x -- x x)` could be used as the stack-effect comment 
+for the word `dup`.
+The comment indicates that the word will make a copy of TOS and add it to the stack,
+leaving the original value, now as NOS.
+
+The word `\` (backslash followed by a space) is known as drop-line and is also
+available as a method of including longer comments.
+Upon executing, it drops everything from the input stream until the next carriage-return.
+Instructions to the user, clarifications of usage examples can be conveniently expressed
+in a block of text, with each line started by a backslash.
+
 
 = Integer arithmetic operations
 
+With FlashForth having 16-bit cells, the standard arithmetic operators 
+shown in Table 1 below
+operate on 16-bit signed integers, in the range `-32768` to `+32767` (decimal).
+Note that the word `u*/mod` (scale) uses a 32-bit intermediate result.
+FlashForth also provides arithmetic operators 
+for double numbers (32-bit integers), signed and unsigned.
+See the companion quick reference sheet for a more complete list.
+
+.Arithmetic operators for single (16-bit) numbers.
+[cols=3,options="header"]
+|===
+| word 
+| effect
+| comment
+
+| `+` 
+| `( n1 n2 -- n1+n2)` 
+| sum
+
+| `-` 
+| `( n1 n2 -- n1-n2)`
+| difference 
+
+| `*`
+| `( n1 n2 -- n1*n2)`
+| product
+
+| `/`
+| `( n1 n2 -- n1/n2)`
+| quotient
+
+| `mod`
+| `( n1 n2 -- n.rem)`
+| remainder
+
+| `*/` 
+| `( n1 n2 n3 -- n1*n2/n3)`
+| scaled quotient
+
+| `u/`
+| `( u1 u2 -- u1/u2)`
+| unsigned quotient
+
+| `u/mod`
+| `( u1 u2 -- rem quot)`
+| remainder and quotient
+
+| `u*/mod`
+| `( u1 u2 u3 -- rem quot)`
+| scaled remainder and quotient
+
+|===
+
+For an example of using arithmetic operators, consider the 
+conversion of temperature values from Celcius to Fahrenheit 
+using the formula `n2 = (n1*9/5 + 32)`.
+----
+decimal  ok<#,ram>
+: to-f-1 ( n1 -- n2) 9 * 5 / #32 + ;  ok<#,ram>
+0 to-f-1 . 32  ok<#,ram>
+100 to-f-1 . 212  ok<#,ram>
+500 to-f-1 . 932  ok<#,ram>
+5000 to-f-1 . -4075  ok<#,ram>
+----
+This simple function works fine, up until the intermediate result
+`(n1*9)` overflows the 16-bit cell.
+With a bit more bother, we can make use of the scaled operator 
+to avoid overflow of the intermediate result.
+Again, the following function computes expression `(u1*9/5 + 32)`
+but now uses the scale operator `*/`. 
+This operator uses a 32-bit intermediate result to avoid overflow.
+----
+: to-f-2 ( n1 -- n2) 9 5 */ #32 + ;  ok<#,ram>
+0 to-f-2 . 32  ok<#,ram>
+100 to-f-2 . 212  ok<#,ram>
+500 to-f-2 . 932  ok<#,ram>
+5000 to-f-2 . 9032 ok<#,ram>  
+----
+Note that not all of the arithmetic operators are part of the core FlashForth
+that is written in PIC18 assembly language and, to get the scale operator,
+you will need to load the `math.fs` file of word definitions before
+trying this second example.
+This file is available in the common forth source directory of the FlashForth distribution.
+
+
 = A little more on compiling
 
+While compiling, it is possible to temporarily switch to interpreter mode
+with the word `[` and switch back into compile mode with `]`.
+The following example defines the word \verb!feet! that converts a number
+representing a length in feet to an equivalent number of millimetres.
+The intermediate result is in tenths of a millimetre so that precision is retained and,
+to make the conversion clear, the numeric conversion factor is computed
+as we compile the word.
+----
+: feet ( u1 -- u2) 
+  [ #254 #12 * ] literal #10 u*/mod 
+  swap drop ;  ok<#,ram>
+10 feet  ok<#,ram>3048 
+----
+The word `literal` is used to compile the data value in TOS 
+into the definition of `feet`.
+At run-time, that data value will be placed onto the stack.
+
+
 = Looping and structured programming
+
+The control words available for structured programming are shown in Table 2,
+where `xxx` and `yyy` denote sequences of words and 
+`cond` denotes a boolean flag value.
+Within the body of a `for` loop, you may get the loop counter with the word `r@`.
+It counts from _u_-1 down to 0.
+If you `exit` from a for loop, you must drop the loop count with `rdrop`.
+
+.Flow control in FlashForth.
+[cols=2,options="header"]
+|===
+| Code 
+| Description
+
+| _cond_ `if` _xxx_ `else` _yyy_ `then`
+| Conditional execution.
+
+| `begin` _xxx_ `again`
+| Infinite loop.
+
+| `begin` _xxx_ _cond_ `until`
+| Loop until _cond_ is true.
+
+| `begin` _xxx_ _cond_ `while` _yyy_ `repeat`
+| Loop while _cond_ is true, _yyy_ is not executed on the last iteration.
+
+| _u_ `for` _xxx_ `next` 
+| Loop _u_ times.
+
+| `endit` 
+| Sets loop counter to zero so that we leave the loop when `next` is encountered.
+
+| `exit` 
+| Exit from a word.
+
+|===
+
+Here are a couple of examples of counted loops, 
+one constructed from the generic `begin` ... `until` construct,
+and the other using the dedicated `for` ... `next` construct.
+Note the difference in counter ranges.
+----
+-countdown  ok<#,ram>
+marker -countdown  ok<#,ram>
+: countdown1 ( n --) 
+  begin cr dup . 1- dup 0= until 
+  drop ;  ok<#,ram>
+5 countdown1 
+5 
+4 
+3 
+2 
+1  ok<#,ram>
+: countdown2 ( n --) 
+  for cr r@ . next ;  ok<#,ram>
+5 countdown2 
+4 
+3 
+2 
+1 
+0  ok<#,ram>
+----
+It was convenient, when setting up these examples, to put the source code into a little file
+that could be reloaded easily each time the source text was changed.
+----
+-countdown
+marker -countdown
+: countdown1 ( n --)
+  begin cr dup . 1- dup 0= until
+  drop ;
+5 countdown1
+: countdown2 ( n --)
+  for cr r@ . next ;
+5 countdown2
+----
 
 = More on defining words
 
