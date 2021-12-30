@@ -196,13 +196,376 @@ Now, type in `hey` and see what happens. +
 
 = Extending the dictionary
 
+// It seems that ASCIIdoc has a special form of quoting hell.
+// The following lines occasionally put a backslash in front of the asterisk
+// that represents multiply in the bits of quoted text.
+// This is to stop it being interpreted as "start bold".
+
+Forth belongs to the class of Threaded Interpretive Languages.
+This means that it can interpret commands typed at the console,
+as well as compile new subroutines and programs.
+The Forth compiler is part of the language and special words are
+used to make new dictionary entries (_i.e._ words).
+The most important are `:` (start a new definition) and
+`;` (terminate the definition).
+Let's try this out by typing: +
+`: \*+  *  +  ;` &#x23CE; `ok<#,ram>` +
+What happened?
+The action of `:` is to create a new dictionary entry named `*+` and 
+switch from _interpret_ to _compile_ mode.
+In compile mode, the interpreter looks up words and, rather than executing them,
+installs pointers to their code.
+If the text is a number, instead of pushing it onto the stack, FlashForth builds
+the number into the dictionary space allotted for the new word, 
+following special code that puts the stored number onto the stack whenever the 
+word is executed.
+The run-time action of `\*+` is thus to execute sequentially the previously-defined words
+`*` and `+`
+
+The word `;` is special.  
+It is an _immediate_ word and is always executed, even if the system is in compile mode.
+What `;` does is twofold.
+First, it installs the code that returns control to the next outer level 
+of the interpreter and, second, it switched back from compile mode to interpret mode.
+
+Now, try out your new word: +
+`5 6 7 *+ .` &#x23CE; `47 ok<#,ram>` +
+This example illustrated two principal activities of working in Forth:
+adding a new word to the dictionary, and trying it out as soon as it was defined.
+
+Note that, in FlashForth, names of dictionary entries are limited to 15 characters.
+Also, FlashForth will not redefine a word that already exists in the dictionary.
+This can be convenient as you build up your library of Forth code because it allows
+you to have repeated definitions, say for special function registers, in several files
+and not have to worry about the repetition.
+
 == Dictionary management
+
+The word `empty` will remove all dictionary entries that you have made and
+reset all memory allocations to the original values of the core FlashForth interpreter.
+As you develop an application, it will often be convenient to return to an earlier,
+intermediate dictionary and memory allocation state. 
+This can be done with the word `marker`.
+For example, we could issue the command
+----
+marker -my-mark
+----
+Later, after we have done some work with the FlashForth system and 
+defined a few of our own words and variables,
+we can return the dictionary and memory allocation to the earlier state
+by executing the word `-my-mark`.
+Here, we have arbitrarily chosen the word `-my-mark` 
+so it would be good to choose a word that has
+some specific and easily remembered meaning for us.
 
 = Stacks and reverse Polish notation
 
+The stack is the Forth analog of a pile of cards with numbers written on them.
+The numbers are always added to the top of the pile, and removed from the top of the pile.
+FlashForth incorporates two stacks: the parameter stack and the return stack,
+each consisting of a number of cells that can hold 16-bit numbers.
+
+The Forth input line +
+`decimal 2 5 73 -16` &#x23CE; +
+leaves the parameter stack in the state +
+[cols=3,options="header"]
+|===
+| cell number 
+| content 
+| comment
+
+| 0 
+| `-16` 
+| `TOS` (Top Of Stack)
+
+|1 
+| `73` 
+| `NOS` (Next On Stack)
+
+| 2 
+| `5`
+|
+
+| 3 
+| `2`
+|
+
+|
+| &#x23B5;
+|
+|===
+We will usually employ zero-based relative numbering in Forth data structures
+such as stacks, arrays and tables.
+Note that, when a sequence of numbers is entered like this, the right-most number
+becomes TOS and the left-most number sits at the bottom of the stack.
+
+Suppose that we followed the original input line with the line +
+`+ - * .` &#x23CE; +
+to produce a value _xxx_.
+What would the _xxx_ be?
+The operations would produce the successive stacks: +
+[cols=7,options="header"]
+|===
+| word executed
+|
+|
+| `+`
+| `-`
+| `*`
+| `.`
+
+| stack result
+| `TOS`
+| `-16`
+| `57`
+| `-52`
+| `-104`
+| &#x23B5;
+
+|
+| `NOS`
+| `73`
+| `5`
+| `2`
+| &#x23B5;
+|
+
+|
+|
+| `5`
+| `2`
+| &#x23B5;
+|
+|
+
+|
+|
+| `2`
+| &#x23B5;
+|
+|
+|
+
+|
+|
+| &#x23B5;
+|
+|
+|
+|
+
+|===
+
+So, after both lines, the terminal window shows
+----
+decimal 2 5 73 -16  ok<#,ram>2 5 73 65520 
++ - * . -104  ok<#,ram>
+----
+Note that FlashForth conveniently displays the stack elements on interpreting each line 
+and that the value of -16 is displayed as the 16-bit unsigned integer 65520.
+Also, the word `.` consumes the -104 data value, leaving the stack empty.
+If we execute `.` on the now-empty stack, the outer interpreter aborts with
+a stack pointer error (`SP ?`).
+
+The programming notation where the operands appear first,
+followed by the operator(s) is called reverse Polish notation (RPN).
+It will be familiar to students who own RPN calculators made by Hewlett-Packard.
+
+
 == Manipulating the parameter stack
 
+Being a stack-based system, FlashForth must provide ways to put numbers onto the stack,
+to remove them and to rearrange their order.
+We've already seen that we can put numbers onto the stack by simply typing the number.
+We can also incorporate the number into the definition of a Forth word.
+
+The word `drop` removes a number from the TOS thus making NOS the new TOS.
+The word `swap` exchanges the top 2 numbers.
+`dup` copies the TOS into NOS, pushing all of the other numbers down.
+`rot` rotates the top 3 numbers, bring the number that was just below NOS to the TOS.
+These actions are shown below.
+
+[cols=7,options="header"]
+|===
+| word executed
+|
+|
+| `drop`
+| `swap`
+| `rot`
+| `dup`
+
+| stack result
+| TOS
+| `-16`
+| `73`
+| `5`
+| `2`
+| `2`
+
+|
+| NOS
+| `73`
+| `5`
+| `73`
+| `5`
+| `2`
+
+|
+|
+| `5`
+| `2`
+| `2`
+| `73`
+| `5`
+
+|
+|
+| `2`
+| &#x23B5;
+| &#x23B5;
+| &#x23B5;
+| `73`
+
+|
+|
+| &#x23B5;
+|
+|
+|
+| &#x23B5;
+
+|===
+
+FlashForth also includes the words `over`, `tuck` and `pick` that act as shown below.
+`over` makes a copy of NOS and then leaves it as the new TOS.
+`tuck` make a copy of the TOS and inserts the copy just below the NOS.
+Note that `pick` must be preceeded by an integer that (gets put on the stack briefly and) 
+says where on the stack an element gets picked.
+Also, for the PIC18 version of FlashForth, 
+the definition of `pick` is provided as Forth source code in the file `pick.fs`.
+The content of this file must be sent to the microcontroller to define the word before we try to use it. 
+
+[cols=6,options="header"]
+|===
+| word executed
+|
+|
+| `over`
+| `tuck`
+| `4 pick`
+
+| stack result
+| TOS
+| `-16`
+| `73`
+| `73`
+| `5`
+
+|
+| NOS
+| `73`
+| `-16`
+| `-16`
+| `73`
+
+|
+|
+| `5`
+| `73`
+| `73`
+| `-16`
+
+|
+|
+| `2`
+| `5`
+| `73`
+| `73`
+
+|
+|
+| &#x23B5;
+| `2`
+| `5`
+| `73`
+
+|
+|
+|
+| &#x23B5;
+| `2`
+| `5`
+
+|
+|
+|
+|
+| &#x23B5;
+| `2`
+
+|
+|
+|
+|
+|
+| &#x23B5;
+
+|===
+
+From these actions, we can see that `0 pick` is the same as `dup`,
+`1 pick` is a synonym for `over`.
+The word `pick` is mainly useful for dealing with deep stacks, however,
+you should avoid making the stack deeper than 3 or 4 elements.
+If you are finding that you often have to reason about deeper stacks, 
+consider how you might refactor your program.
+
+Double length (32-bit) numbers can also be handled in FlashForth.
+A double number will sit on the stack as a pair of 16-bit cells, 
+with the cell containing the least-significant 16-bits 
+sitting below the cell containing the most-significant 16-bits. 
+The words for manipulating pairs of cells on the parameter stack are
+`2dup`, `2swap`, `2over` and `2drop`.
+For example, we can put a double value onto the stack by putting a period
+as the last character of the number literal. +
+`hex 23.` &#x23CE; `ok<$,ram>23 0` 
+
+Memory on microcontrollers is limited and,
+for FlashForth on the PIC18, the parameter stack is limited to 26 cells.
+If you accumulate too many items on the stack, 
+it will overflow and the interpreter will abort.
+The stack will be emptied and the interpreter will wait for further input.
+
+
 == The return stack and its uses
+
+During compilation of a new word, FlashForth establishes links from the calling word
+to the previously-defined words that are to be invoked by execution of the new word.
+This linkage mechanism, during execution, uses the return stack (rstack).
+The address of the next word to be invoked is placed on the rstack so that,
+when the current word is done executing, the system knows where to jump 
+to the next word.
+Since words can be nested, there needs to be a stack of these return addresses.
+
+In addition to serving as the reservoir of return addresses, 
+the return stack is where the counter for the `for ... next` construct is placed.
+(See the section on looping.)
+The user can also store to and retrieve from the rstack but this must be done carefully
+because the rstack is critical to program execution.
+If you use the rstack for temporary storage, you must return it to its original state,
+or else you will probably crash the FlashForth system.
+Despite the danger, there are times when use of the rstack as temporary storage can make
+your code less complex.
+
+To store to the rstack, use `>r` to move TOS from the parameter stack 
+to the top of the rstack.
+To retrieve a value, `r>` moves the top value from the rstack 
+to the parameter stack TOS.
+To simply remove a value from the top of the rstack there is the word `rdrop`.
+The word `r@` copies the top of the rstack to the parameter stack TOS 
+and is used to get a copy of the loop counter in a `for` loop 
+discussed in the section on looping. 
+
 
 = Using memory
 
