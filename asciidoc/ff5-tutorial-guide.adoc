@@ -1,0 +1,241 @@
+= A Tutorial Guide to Programming PIC18, PIC24 and ATmega Microcontrollers with FlashForth
+Peter Jacobs
+2016 Version -- 2021-12-31
+:toc: right
+:stylesheet: ./readthedocs.css
+:sectnums:
+:imagesdir: ../figs
+:stem: latexmath
+:eqnums:
+
+:leveloffset: +1
+
+Modern microcontrollers provide an amazingly diverse selection of hardware
+peripherals, all within a single chip.
+One needs to provide a small amount of supporting hardware to power the chip
+and connect its peripheral devices to the signals of interest and, when powered up,
+these devices need to be configured and monitored by a suitable firmware program.
+These notes focus on programming the 28-pin PIC18F26K22 microcontroller and
+its 40-pin PIC18F46K22 sibling, 
+the 16-bit PIC24FV32KA302 and 
+the 8-bit AVR ATmega328P.
+These microcontrollers are all available in plastic DIP packages, 
+can be run from a 5 volt supply,
+and can be built into very simple prototype hardware.
+A number of example programs, in the Forth language, are provided 
+to illustrate the use of some of each microcontroller's peripheral devices.
+The examples cover the very simple "flash a LED" exercise through to driving
+a character-based LCD via its 4-bit parallel interface.
+Communication with SPI and I^2^C devices is also covered, with a common set of words
+being used to abstract away the differences between microcontrollers 
+in terms of detailed bits and registers.
+
+= A selection of microcontrollers
+
+Over the past couple of decades, microcontrollers have evolved to be
+cheap, powerful computing devices that even Mechanical Engineers can 
+use in building bespoke instrumentation for their research laboratories.
+Typical tasks include monitoring of analog signals, sensing pulses and 
+providing timing signals.
+Of course these things could be done with a modern personal computer
+connected via USB to a commercial data acquisition and signal processing system
+but there are many situations where the small, dedicated microcontroller,
+requiring just a few milliamps of current, performs the task admirably 
+and at low cost.
+
+Modern microcontrollers provide an amazingly diverse selection of hardware
+peripherals, all within a single chip.
+One needs to provide a small amount of supporting hardware to power the chip
+and connect its peripheral devices to the signals of interest and, when powered up,
+these devices need to be configured and monitored by a suitable firmware program.
+These following sections provide an introduction to the details of doing this 
+with an 8-bit Microchip PIC18F26K22 or PIC18F46K22 microcontroller, 
+a 16-bit PIC24FV32KA302 microcontroller
+and an 8-bit ATmega328P microcontroller, 
+all programmed with the https://flashforth.com)[FlashForth] version 5 interpreter.
+
+Within each family of Microchip or Atmel microcontrollers, 
+the individual microcontroller units (MCUs) all have the same core, 
+_i.e._ same instruction set and memory organisation.
+Your selection of which MCU to actually use in your project can be based on
+a couple of considerations.
+If you are on a tight budget and will be making many units, 
+choose an MCU with just enough functionality, however,
+if convenience of development is more important, 
+choose one with "bells and whistles". 
+For this tutorial guide, we will value convenience and so 
+will work with microcontrollers that have:
+
+* a nice selection of features, including a serial port, 
+  several timers and an analog-to-digital converter.
+  See the feature list and the block diagram of the PIC18F26K22 and 
+  PIC18F46K22 MCUs on the following pages.
+
+* a 28-pin narrow or 40-pin DIL package, which is convenient for prototyping and
+  has enough I/O pins to play without needing very careful planning.
+
+* an ability to work as 3.3V or 5V systems.
+
+* a pinout as shown at the start of the datasheets (books) for each of the microcontrollers.
+  You will be reading the pages of these books over and over but we include 
+  the following couple of pages from the PIC18F22K26/PIC18F46K22 datasheet to give an overview.
+
+* an internal arrangement that is built around an 8-bit or 16-bit data bus.
+
+* the ``Harvard architecture'' with separate paths and storage areas for program 
+  instructions and data.
+
+We won't worry too much about the details of the general-purpose registers,
+the internal static RAM or the machine instruction set because we will let
+the FlashForth interpreter handle most of the details, however, 
+memory layout, especially the I/O memory layout is important for us as programmers.
+The peripheral devices, which are used to inferface with the real world,
+are controlled and accessed via registers in the data-memory space.
+
+.Features page from the PIC18F26K22 data sheet.
+[#features-of-pic18f26k22]
+image::pic18f26k22-features-from-datasheet.svg[width=100%]
+
+.Block diagram of the PIC18F26K22 microcontroller.
+[#block-diagram-pic18f26k22]
+image::pic18f26k22-block-diagram-from-datasheet.svg[width=100%]
+
+
+# Development boards
+
+This tutorial is based around simple support hardware for each of the microcontrollers.
+If you don't want to do your own soldering, there are easy-to-buy demonstration boards 
+available as a convenient way to get your hardware up and going.
+If you are a student of mechatroncis, however, you must eventually design and build your own hardware.  
+The strip-board versions are aimed at you.
+
+## PIC18 family boards
+
+Here is a picture of PICDEM 2 PLUS with PIC18F46K22-I/P in the 40-pin socket (U1)
+and running the LCD, as described in a later section.
+We'll make use of the serial RS-232 interface (MAX232ACPA, U3) 
+to both program Forth application and to communicate with running applications.
+Other conveniences include on-board LEDs, switches, a potentiometer (RA0) 
+and I^2^C devices, such as a TC74 temperature sensor (U5), just below the MCU
+and a 24LC256 serial EEPROM (U4).
+Initial programming of the FlashForth system into the MCU can be done via jack J5 
+(labelled ICD in the lower left of the photograph)
+with a Microchip MPLAB-ICD3, PICkit3, or similar device programmer.
+
+.A PICDEM2 board from Microchip with a PIC18F46K22-I/P microcontroller driving the LCD.
+[#lcd-on-picdem2-board]
+image::picdem2plus-with-46k22-flashforth-5.jpeg[width=100%]
+
+If you want a homebrew system, 
+you can build a minimal system on strip-board that works well.
+One of the nice things about such a strip-board construction is that you can
+easily continue construction of your bespoke project on the board and,
+with careful construction, your prototype can provide years of reliable service. 
+
+.A minimal PIC18F26K22 system build on strip-board.
+[#minimal-pic18f26k22-board]
+image::pic18f26k22-demo-board-with-regulator-board-2014.jpeg[width=100%]
+
+Here is a detailed view of the home-made demo board with PIC18F26K22 in place.
+This board is suitable for the exercises in this guide.
+A separate regulator board is to the left and a current-limited supply provides the 
+input power.
+The board is simple to make by hand, with header pins for the reset switch 
+and connections to the LEDs.
+The 4-pin header in the foreground provides an I^2^C connection.
+The ICSP header is only needed to program FlashForth into the MCU, initially.
+All communication with the host PC is then via the TTL-level serial header (labelled FTDI-232) 
+at the right.
+Beyond the minimum required to get the microcontroller to function, 
+we have current-limiting resistors and header pins on most of the MCU's I/O pins.
+This arrangement is convenient for exercises such as interfacing to the 4x3 matrix keypad
+discussed in a later section.
+
+
+The schematic diagram of this home-brew board is shown on the following page.
+Note that there is no crystal oscillator on the board; the internal oscillator is 
+sufficiently accurate for asynchronous serial port communication.
+Note, also, the 1k resistors in the TX and RX nets.  
+These limit the current going through the microcontroller pin-protection diodes
+in the situation where the microcontroller board is unpowered and the FTDI-232 cable
+is still plugged in to your PC.
+This will happen at some point and, without the current-limiting resistors, the FTDI cable
+will power the microcontroller, probably poorly.
+
+.A schematic diagram of the minimal board for the PIC18F26K22.
+[#schematic-pic18f26k22]
+image::demo-board-schematic-26k22.svg[width=100%]
+
+## AVR and PIC24 boards
+
+# FlashForth
+
+## Getting FlashForth and programming the MCU
+
+## Building for the PIC18F26K22 or PIC18F46K22
+
+## Building for the ATmega328P
+
+# Interacting with FlashForth
+
+# Introductory examples
+
+## Flash a light-emitting diode with the PIC24
+
+## Flash a light-emitting diode with the ATmega
+
+## Set the cycle duration with a variable (PIC18)
+
+## Hello, World: Morse code
+
+# Read and report an analog voltage
+
+## PIC24FV32KA30X
+
+## ATmega328P
+
+# Counting button presses
+
+# Counting button presses via interrupts
+
+# Scanning a 4x3 matrix keypad
+
+# Communicating with SPI devices
+
+## PIC24FV32KA30X
+
+## ATmega328P
+
+## Words to drive a matrix display
+
+# Communicating with I^2^C devices
+
+## PIC18FX6K22
+
+## PIC24FV32KA30X
+
+## ATmega328P
+
+## Notes on using the words
+
+## Detecting I^2^C devices
+
+# Using I^2^C to get temperature measurements
+
+# Making high-resolution voltage measurements
+
+# An I^2^C slave example
+
+# Speed of operation -- bit banging
+
+## PIC24FV32KA302
+
+## ATmega328P
+
+# Driving an Hitachi-44780 LCD controller
+
+[bibliography]
+= References
+
+* [[[brodie_1987,1]]] Brodie, L. and Forth Inc. (1987) Starting Forth: An introduction to the Forth Language and operating system for beginners and professionals, 2nd Ed. _Prentice Hall_  ISBN 0-13-843079-9. Also, updated and online http://home.iae.nl/users/mhx/sf.html and the official online version http://www.forth.com/starting-forth/
+
