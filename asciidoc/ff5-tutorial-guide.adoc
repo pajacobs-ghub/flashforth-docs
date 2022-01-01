@@ -151,7 +151,6 @@ we have current-limiting resistors and header pins on most of the MCU's I/O pins
 This arrangement is convenient for exercises such as interfacing to the 4x3 matrix keypad
 discussed in a later section.
 
-
 The schematic diagram of this home-brew board is shown on the following page.
 Note that there is no crystal oscillator on the board; the internal oscillator is 
 sufficiently accurate for asynchronous serial port communication.
@@ -168,25 +167,552 @@ image::demo-board-schematic-26k22.svg[width=100%]
 
 ## AVR and PIC24 boards
 
+The Eleven from Freetronics, shown in the left half of the following photograph,
+is an Arduino-compatible board carrying an ATmega328P microcontroller.
+This is a convenient piece of hardware with many prototype-friendly boards 
+available to plug into the headers around the periphery of the board.
+Although these boards come with the Arduino bootloader preprogrammed into the 
+ATmega328 microcontroller, the standard AVR 6-pin programming header on the
+right-hand end of the board (in the photo) can be used to reprogram the microcontroller
+with the FlashForth interpreter.
+Power and serial port access is through the USB connector at the left.
+
+If you want an almost-no-solder option for prototyping with the PIC24FV32KA302, 
+Microchip provide the Microstick 5V for PIC24K-series.
+As shown in the following photograph, this is convenient in that it includes 
+a programmer on-board and can be plugged into a bread-board.
+The power supply and flash programming access is provided through the USB connector 
+on the left of the board while the serial port connection is via the 6-pin connector 
+on the right-end of the board.
+
+[#eleven-and-microstick]
+image::eleven-and-microstick-boards-2014.jpeg[width=100%]
+
+Building a minimal board, by hand, for any of these processors is fairly easy and 
+strip-board versions for each is shown in the following photograph.
+The left-hand board is for the PIC18F26K22, before all of the extra protection resistors
+were added.  In this state, FlashForth can already be used on this board for nearly all 
+of the exercises in the following sections.
+Schematic diagrams for the PIC24 and AVR microcontrollers are shown on the following pages.
+
+[#home_built_minimal_boards]
+image::home-built-minimal-boards-2014.jpeg[width=100%]
+
+Each of the boards has headers for (1) power, (2) in-circuit serial programming, 
+(3) I^2^C communication and
+(4) TTL-level-232 serial communication.
+The ATmega328 board on the right has a few more protection resistors installed and has
+an 16\,MHz crystal because serial-port communication was found to be unreliable using the internal oscillator.
+
+[#schematic_328]
+image::demo-board-schematic-328.svg[width=100%]
+
+[#schematic_32ka302]
+image::demo-board-schematic-32ka302.svg[width=100%]
+
+
 # FlashForth
+
+Forth is a word-based language, in which the data stack is made available to the programmer
+for temporary storage and the passing of parameters to functions.
+Everything is either a number or a word.
+Numbers are pushed onto the stack and words invoke functions.
+The language is simple enough to parse that full, interactive Forth systems may be implemented 
+with few (memory) resources.
+Forth systems may be implemented in a few kilobytes of program memory and a few hundred bytes
+of data memory such that it is feasible to provide the convenience of a fully interactive
+program development on very small microcontrollers.
+
+The classic beginners book by Brodie^<<brodie_1987,1>>^ is available online,
+as is Pelc's more recent book^<<pelc_2011,3>>^.
+A more detailed reference is published by Forth Inc^<<conklin_2007,2>>^.
+These books are biased toward Forth running on a personal computer rather than on
+a microcontroller, however, they are a good place to start your reading. 
+For an introductory document that is specific to FlashForth, 
+see the companion document, Elements of FlashForth 5.
+
+https://flashforth.com[FlashForth] for the PIC18, PIC24 and ATmega families of microcontrollers 
+is a full interpreter and compiler that runs entirely on the microcontroller.
+It is a 16-bit Forth with a byte-addressable memory space.
+Even though there are distinct memory types (RAM, EEPROM and Flash) and 
+separate busses for data and program memory in these Harvard-architecture
+microcontrollers, FlashForth unifies them into a single 64kB memory.
+
+Above working in assembler, FlashForth does use some resources, both memory and compute cycles, 
+but it provides such a nice, interactive environment that these costs are usually returned 
+in convenience while tinkering with your hardware.
+Forth programs are very compact so you will have less code to maintain in the long run.
+The interpreter can also be available to the end user of your instrument, possibly
+for making parameter adjustments or for making the hardware versatile by having a 
+collection of application functions present simultaneously in the firmware, 
+with the user selecting the required function as they wish.
+
 
 ## Getting FlashForth and programming the MCU
 
+FlashForth is written in assembler, with one program source for each of 
+the microcontroller families and a number of Forth text files to augment the
+core interpreter.
+The source code can be downloaded from SourceForge at the URL
+http://sourceforge.net/projects/flashforth/
+There, you will see that you can get a packaged release or you can clone the git repository.
+
+To build from this source, you will need to start up your integrated development environment 
+(be it MPLAB, MPLAB-X or AVR Studio), open the program source and config files in this IDE 
+and edit the config file(s) to match your selection of oscillator.
+There are other options to customize but the choice of oscillator is the main one.
+The machine code can then be assembled and programmed into your microcontroller with 
+a suitable device programmer (PICkit3, ICD3, STK500, AVRISP MkII, ...).
+Once programmed with FlashForth, and mounted in a board that provides power and serial
+communications as described in the previous section, you will be ready to interact with
+FlashForth via a serial terminal or shell.
+
 ## Building for the PIC18F26K22 or PIC18F46K22
+
+For our minimal system with either the PIC18F26K22 or PIC18F46K22 microcontroller,
+we elect to use the internal (16 MHz) oscillator multiplied by 4 by the PLL.
+Within the `MPLAB-X` development environment, 
+we started a new standalone project to build our FlashForth program
+that will use the microcontroller's UART serial port as the OPERATOR communications channel.
+Following the prompt screens, we selected a specific processor (PIC18F26K22), 
+our hardware tool (ICD3), and the compiler toolchain (mpasm).
+
+To build the actual machine code that will be programmed into the flash memory
+of the microcontroller,
+it is sufficient to assemble the principal source file `ff-pic18.asm`
+along with the configuration (or header) files 
+`pic18f-main.cfg`, `pic18fxxxx.cfg`, `p18f2x4xk22.cfg`,
+and use the linker script `FF_0000.lkr`.
+The source file and config files can be found in the directory `pic18/src/`,
+while the linker file is in `pic18/lkr/`.
+There may be other configuration files already added to the project but you can ignore them.
+
+We edited the processor-specific config file, `p18f2x4xk22.cfg`, writing `PLLCFG = ON` 
+to have the PLL enabled (giving F~OSC~ = 64 MHz),
+enable the watchdog timer with a 1:256 postscale (`WDTPS = 256`) 
+to get approximately a 1 second time-out period,
+and enable the external reset capability (`MCLRE = EXTMCLR`).
+Being able to reset the microcontroller by bringing the `MCLR` pin low is something that
+we find convenient when tinkering with new hardware.
+We set the final line as +
+`#define PLL ENABLE`
+
+We needed to edit the \verb!pic18f-main.cfg! file only to set the system clock frequency
+as `constant clock=d'64000000'`.
+With this clock frequency, the microcontroller requires approximately 7 mA current while
+the interpreter is running and waiting for input.
+
+There are many other options for customizing the FlashForth program in this file,
+however, the default parameters are fine for the first build of our minimal system.
+To see your options for all of the configuration bits for your specific microcontroller, 
+it is convenient to open the MPLAB-X view from the main menu:
+`Window` -> `PIC Memory Views` -> `Configuration Bits`.
+
+With the specific microcontroller selected for the project, the config file
+`pic18fxxxx.cfg` will automatically select the appropriate MPLAB include file for 
+the microcontroller, be it `p18f26k22.inc` for the 28-pin chip on the home-made board
+or `p18f46k22.inc` for the 40-pin chip on the PICDEM 2 PLUS board.
+If the build process complains of not being able to find the MCU-specific include file,
+you may need to adjust the case-sensitivity of the assembler.
+This check box can be found in the Project Properties dialog, 
+under `General Options` for the `mpasmx` assembler, as shown in the following screen shot. 
+
+image::MPLAB-X-mpasm-case-sensitivity.png[width=100%]
+
+The following image shows the result of building in Microchip's MPLAB X IDE.
+The lower left frame in the MPLAB-X window shows the MCU resources used.
+With 426 bytes of SRAM used (another 3470 free) and 
+8948 bytes of program memory used (56588 free),
+For the PIC18F26K22 MCU, FlashForth occupies only about one-seventh of 
+the microcontroller's program memory.
+Most of the memory is available for your application.
+For more details on the SRAM memory map, 
+see the FlashForth 5 Quick Reference.
+There, Mikael Nordman has provided a memory map that shows how
+the SRAM memory is allocated within the FlashForth system. 
+
+image::MPLAB-X-build-of-Flash-Forth-for-PIC18F26K22-2016.png[width=100%]
+
+The final step is to program the FlashForth machine code into the flash memory of the microcontroller,
+using whatever device programmer you happen to have plugged into your development system.
+The Dashboard view in the screen shot above shows that we have seleted to use of the MPLAB ICD3.
+
+## Building for the PIC24FV32KA302
+
+Building for the 16-bit PIC24 family is similar process.
+This time look for the source code files in the `pic24/` subdirectory.
+There are fewer config files but you may need to customize the closest one for 
+your particular processor.  
+Here is the required text in the `p24fk_config.inc` file 
+for our PIC24FV32KA302-I/SP microcontroller 
+using its internal 8 MHz oscillator with 4X PLL
+and installed on the home-made minimal board:
+
+----
+;;; Device memory sizes. Set according to your device.
+;;; You can increase the addressable flash range be decreasing the addressable ram.
+;;; Below is the setting for max amount of ram for PIC24FV32KA302
+.equ FLASH_SIZE,     0x5800  ; Flash size in bytes without the high byte
+                             ; See program memory size in the device datasheet.
+.equ RAM_SIZE,       0x0800  ; Ram size in bytes
+.equ EEPROM_SIZE,    0x0200  ; Eeprom size
+
+; For some reason the normal config macros did not work
+           .pushsection __FOSCSEL.sec, code
+           .global __FOSCSEL
+__FOSCSEL: .pword FNOSC_FRCPLL
+           .popsection
+; Start additions for FF Tutorial board with PIC24FV32KA30x
+           .pushsection __FOSC.sec, code
+           .global __FOSC
+__FOSC:    .pword OSCIOFNC_OFF
+           .popsection
+           .pushsection __FICD.sec, code
+           .global __FICD
+__FICD:    .pword ICS_PGx2
+           .popsection
+; End additions	   
+
+.equ FREQ_OSC, (8000000*4)	 ;Clock (Crystal)frequency (Hz)
+----
+
+Once programmed, FlashForth uses 542 of the microcontroller's 2048 bytes of SRAM and
+4544 of the MCU's 11264 words of Flash memory.
+This leaves most of the memory for your Forth application program.
+Although this appears to be a lot less than that available in the PIC18F26K22 MCU,
+this 16-bit MCU has lots of interesting hardware.
+With instruction cycle frequency of 16 MHz and the interpreter waiting for input,
+the current consumption is 7.5 mA, approximately the same as for the 8-bit PIC18F26K22. 
+
 
 ## Building for the ATmega328P
 
+Assembling the FlashForth program within the AVR Studio IDE is fairly simple but
+Mike Nordman has made life even simpler for users of Arduino-like hardware by providing
+a prebuilt `.hex` file that can be programmed into the ATmega328P.
+Here is the command for doing so with avrdude on a Linux PC.
+----
+$ sudo avrdude -p m328p -B 8.0 -c avrisp2 -P usb -e \
+  -U efuse:w:0x07:m \
+  -U hfuse:w:0xda:m \
+  -U lfuse:w:0xff:m \
+  -U flash:w:ff_uno.hex:i
+----
+The fuses are set to use the 16 MHz crystal on the Arduino-like board.
+
+
 # Interacting with FlashForth
+
+Principally, interaction with the programmed MCU is via the serial port.
+For the PIC microcontrollers, settings are 38400 baud 8-bit, no parity, 1 stop bit, with
+software (Xon/Xoff) flow control.
+For the ATmega328P (as programmed above), the baud rate is 9600.
+
+The FlashForth distribution includes a couple of shell programs that are 
+programmed with some knowledge of the FlashForth interpreter. 
+The `ff-shell.py` program is written in Python and allows interaction
+with the microcontroller via a standard command shell.
+It depends on a Python interpreter and the pyserial extension being installed on your PC.
+The `ff-shell.tcl` is a GUI program that displays the interaction text in a dedicated window on your PC.
+It requires the Tcl/Tk interpreter which is usually part of a Linux environment but it may be
+installed on MS-Windows or MacOS as well.
+
+The following images shows the `ff-shell.tcl` window just afer sending the content
+of the `flash-led.txt` file to the PIC18F26K22.
+The device name of `/dev/ttyUSB0` on the status line refers to the USB-to-serial interface 
+that was plugged one of the PC's USB ports.
+It is convenient to start the program with the command
+----
+$ sudo ./ff-shell.tcl 
+----
+If necessary, you can adjust the communication settings by typing new values into the entry boxes 
+and pressing `Enter` to repoen the connection.
+
+image::ff-shell-tcl-flash-led-pic18.png[width=100%]
+
+As you type characters into the main text widget, `ff-shell.tcl` intercepts them and sends them, 
+one at a time, via the serial port to the microcontroller.
+As the microcontroller sends characters back, the program filters them and displays them in the text widget.
+There is also a send-file capability that will send the text from the file
+as fast as it can, without overwhelming the microcontroller.
+The Python program `ff-shell.py` has a special command `#send` to start the equivalent process.
+
+If you have sent the microcontroller off to do a repetitive task, such as flashing the LED indefinitely,
+you can regain the interpreter's attention by sending a `Control-O` character.
+The interpreter aborts the execution of the current word and does a software restart. 
+After initialization, the interpreter announces that it is ready to begin.
+Subsequently pressing `Enter` will get the `ok` response, as shown below.
+The warm restart action is also available from the menu as `Micro` -> `Warm Restart`.
+
+image::figs/ff-shell-tcl-control-O-pic18.png[width=100%]
+
+We find `ff-shell.tcl` a very convenient interaction environment, however,
+if you want to use a standard terminal program on Linux or MacOS, 
+
 
 # Introductory examples
 
+We begin with examples that demonstrate a small number of features of the MCU 
+or of FlashForth.
+Our interest will primarily be in driving the various peripherals of the MCU
+rather than doing arithmetic or dealing with abstract data.
+
 ## Flash a light-emitting diode with the PIC24
+
+The microcontroller version of the "Hello, World" program is typically a program that
+flashes a single LED.
+It will work on either of PIC18F microcontrollers mentioned previously and 
+makes use of a digital input-output pin via the registers that control the IO port.
+The manufacturer's datasheet has a very readable introduction to the IO ports.
+Please read it.
+
+// \code{}{../pic18/flash-led-pic18.txt}
+----
+-flash-led
+marker -flash-led
+$ff8a constant latb
+$ff93 constant trisb
+: init 1 trisb mclr ; \ want RB0 as output
+: do_output latb c@ 1 xor latb c! ; \ toggle RB0 
+: wait #500 ms ;
+: main init begin do_output wait again ;
+main 
+----
+
+Notes on this program:
+
+* If the word `-flash-led` has been previously defined with the word marker, 
+  line 1 resets the dictionary state and continues interpreting the file, 
+  else the interpreter signals that it can't find the word and continues interpreting the file anyway.
+
+* Line 2 records the state of the dictionary and defines the word `-flash-led`
+  so that we can reset the dictionary to its state before the code was compiled, 
+  simply by executing the word \verb!-flash-led!.
+
+* Lines 3 and 4 define convenient names for the addresses of 
+  the special function registers (SFRs) that control IO-port B.
+  Note the literal hexadecimal notation with the `$` character.
+  In the PIC18F family, the SFRs appear near the top of the 64k FlashForth memory space.
+
+* Line 5 is a colon definition for the word \verb!init! that sets up the peripheral
+  hardware.  
+  Here, we set pin RB0 as output.
+  The actual command that does the setting is `mclr`,
+  which takes a bit-mask (00000001) and a register address (`$ff93`)
+  and then clears the register's bits that have been set in the mask.
+  Note the comment starting with the backslash character. 
+  Although the comment text is sent to the MCU, it is ignored.
+  Note, also, the spaces delimiting words.  That spaces after the colon and
+  around the semicolon are important.
+
+* Line 6 is the definition that does the work of fiddling the LED pin.
+  We fetch the byte from the port B latch, toggle bit 0 and 
+  store the resulting byte back into the port B latch.
+
+* Line 7 defines a word to pause for 500 milliseconds.
+  Note the `#` character for a literal decimal integer.
+
+* Line 8 defines the "top-level" coordination word, which we have named
+  `main`, following the C-programming convention.
+  After initializing the relevant hardware, it unconditionally loops, doing the output
+  operation and waiting, each pass.
+
+* Line 9 invokes the `main` word and runs the application.
+  Pressing the `Reset` button will trigger a hardware restart,
+  kill the application and put the MCU back into a state of listening to the serial port.
+  Invoking a warm restart by typing `Control-O` or selecting the `Warm Restart` 
+  menu action in `ff-shell.tcl` may be a more convenient way to stop the application.
+  Typing `main`, followed by `Enter` will restart the application.
+
+Instead of going to the bother of tinkering with the MCU IO Port, 
+we could have taken a short-cut and used the string writing capability 
+of Forth to write a short version that was closer the the operation of
+typical Hello World programs.
+
+// \code{}{../src/short-hello-world.txt}
+----
+: greet-me ." Hello World" ;
+greet-me
+----
+
+Before going on to more examples, it is good to know about the word `empty`.
+This word will reset the dictionary and all of the allotted-memory pointers.
+Because FlashForth does not allow you to redefine words that are already in the dictionary,
+later examples that use the same names for their word definitions, 
+may not compile without complaint if you don't clean up after each exercise.
+
+## Flash a light-emitting diode with the PIC24
+
+// \code{}{../pic24/flash-led.txt}
+----
+-flash-led
+marker -flash-led
+$02c8 constant trisb
+$02cc constant latb
+1 #15 lshift constant bit15
+: init bit15 trisb mclr ; \ set pin as output
+: do_output latb @ bit15 xor latb ! ; \ toggle the bit
+: main init begin do_output #500 ms again ;
+main
+----
+
+Notes on this program:
+
+* This program for the 16-bit microcontroller is essentially the same as that
+  for the 8-bit MCU, with different addresses for the port-control registers, of course.
+  In the PIC24/dsPIC30/dsPIC33 version of FlashForth, the special function registers appear
+  in the lowest 2k bytes of memory.
+* On line 5, we compute the bit pattern for selecting the MCU pin rather than writing it explicitly.
+  We start with a 1 in the least-significant bit of the 16-bit word and then shift it left 15 places,
+  to produce the binary value `%1000000000000000`
+* On line 7, we use 16-bit fetch `@` and store `!` operations because the
+  special function registers for controlling the hardware on this microcontroller are 16 bits wide.
 
 ## Flash a light-emitting diode with the ATmega
 
+// \code{}{../avr8/flash-led-avr.txt}
+----
+-flash-led-avr
+marker -flash-led-avr
+\ PB5 is Arduino digital pin 13.
+\ There is a LED attached to this pin on the Freetronics Eleven.
+ 
+$0024 constant ddrb
+$0025 constant portb
+1 #5 lshift constant bit5
+
+: init bit5 ddrb mset ; \ set pin as output
+: do_output portb c@ bit5 xor portb c! ; \ toggle the bit
+: main init begin do_output #500 ms again ;
+
+main
+----
+
+Notes on this program:
+
+* Again, except for the specific registers and bits, 
+  this program is the same as for the other MCUs.
+  As for other high-level languages, we no longer have to think
+  about the specific machine architecture (usually).
+* Because we are using load and store instructions, 
+  the special function registers start at address `$20`.
+
+
 ## Set the cycle duration with a variable (PIC18)
 
+We enhance the initial demonstration by making the waiting period setable.
+Because of the interactive FlashForth environment, 
+the extra programming effort required is tiny.
+The appearance of the code, however, looks a bit different because we have 
+laid out the colon definitions in a different style and have included 
+more comments.
+
+// \code{}{../pic18/flash-led-var.txt}
+----
+-flash-led-var
+marker -flash-led-var
+\ Flash a LED attached to pin RB0.
+
+$ff8a constant latb
+$ff93 constant trisb
+variable ms_count \ use this for setting wait period.
+
+: init ( -- )
+  1 trisb mclr  \ want RB0 as output
+;
+
+: do_output ( -- )
+  latb c@ 1 xor latb c!  \ toggle RB0
+; 
+
+: wait ( -- )
+  ms_count @ ms
+;
+
+: main ( n -- )
+  ms_count !  \ store for later use in wait
+  init
+  begin
+    do_output
+    wait
+  again
+;
+
+#500 main  \ exercise the application
+----
+
+Notes on this program:
+
+* If the file has been sent earlier defining the application's words,
+  line 1 resets the state of the dictionary to forget those previous definitions. 
+  This makes it fairly convenient to have the source code open in an editing window
+  (say, using `emacs`) and to simply reprogram the MCU by resending the file
+  (with the `Send-File` menu item in `ff-shell.tcl`). 
+
+* Line 7 defines a 16-bit variable `ms_count`.
+
+* Line 30 leaves the wait period on the stack before invoking the `main` word.
+
+* On each pass through the `wait` word, the 16-bit value is fetched from
+
+* `ms_count` and is used to determine the duration of the pause.
+
+
 ## Hello, World: Morse code
+
+Staying with the minimal hardware of just a single LED attached to pin RB0 
+on the PIC18F26K22 or PIC18F46K22, 
+we can make a proper "Hello World" application.
+The following program makes use of Forth's colon definitions so that we can 
+spell the message directly in source code and 
+have the MCU communicate that message in Morse code.
+
+// \code{}{../pic18/hello-world.txt}
+----
+-hello-world
+marker -hello-world
+\ Flash a LED attached to pin RB0, sending a message in Morse-code.
+
+$ff8a constant latb
+$ff93 constant trisb
+variable ms_count \ determines the timing.
+
+: init ( -- )
+  1 trisb mclr  \ want RB0 as output
+  1 latb mclr   \ initial state is off
+;
+
+: led_on 1 latb mset ;
+: led_off 1 latb mclr ;
+: gap ms_count @ ms ; \ pause period
+: gap2 gap gap ;
+: dit led_on gap led_off gap2 ;
+: dah led_on gap2 led_off gap2 ;
+
+\ Have looked up the ARRL CW list for the following letters.
+: H dit dit dit dit ;
+: e dit ;
+: l dit dit ;
+: o dah dah dah ;
+: W dit dah dah ;
+: r dit dah dit ;
+: d dah dit dit ;
+
+: greet ( -- )
+  H e l l o  gap  W o r l d  gap2
+;
+
+: main ( n -- )
+  ms_count !  \ store for later use in gap
+  init
+  begin
+    greet
+  again
+;
+
+#100 main  \ exercise the application
+----
+
 
 # Read and report an analog voltage
 
@@ -238,4 +764,9 @@ image::demo-board-schematic-26k22.svg[width=100%]
 = References
 
 * [[[brodie_1987,1]]] Brodie, L. and Forth Inc. (1987) Starting Forth: An introduction to the Forth Language and operating system for beginners and professionals, 2nd Ed. _Prentice Hall_  ISBN 0-13-843079-9. Also, updated and online http://home.iae.nl/users/mhx/sf.html and the official online version http://www.forth.com/starting-forth/
+
+* [[[conklin_2007,2]]] Conklin, E. K. and Rather, E. D. (2007) Forth Programmer's Handbook, 3rd Ed. _Forth Inc._ ISBN 1-4196-7549-4
+
+* [[[pelc_2011,3]]] Pelc, S. (2011). Programming Forth. _Microprocessor Engineering Limited_, ISBN 978-0-9525310-5-0.  http://www.mpeforth.com/
+
 
