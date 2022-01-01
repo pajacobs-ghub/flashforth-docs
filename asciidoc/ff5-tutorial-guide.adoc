@@ -1,6 +1,6 @@
 = A Tutorial Guide to Programming PIC18, PIC24 and ATmega Microcontrollers with FlashForth
 Peter Jacobs
-2016 Version -- 2021-12-31
+2016 Version ported to ASCIIDOC -- 2021-12-31
 :toc: right
 :stylesheet: ./readthedocs.css
 :sectnums:
@@ -716,49 +716,2320 @@ variable ms_count \ determines the timing.
 
 # Read and report an analog voltage
 
+## PIC18FX6K22
+
+Use of the analog-to-digital converter (ADC) is a matter of, first,
+reading Section 17 of the PIC18F2X/4XK22 datasheet,
+setting the relevant configuration/control registers and then giving it a poke
+when we want a measurement.
+Again, the interactive nature of FlashForth makes the reporting 
+of the measured data almost trivial.
+
+// \code{}{../pic18/read-adc.txt}
+----
+-read-adc
+marker -read-adc
+\ Read and report the analog value on RA0/AN0.
+
+\ Registers of interest on the PIC18F26K22
+$ffc4 constant adresh
+$ffc3 constant adresl
+$ffc2 constant adcon0
+$ffc1 constant adcon1
+$ffc0 constant adcon2
+$ff92 constant trisa
+$ff38 constant ansela
+
+: init ( -- )
+  1 trisa mset \ want RA0 as input
+  1 ansela mset
+  %00000000 adcon1 c! \ ADC references Vdd, Vss
+  %10101111 adcon2 c! \ right-justified, 12-TAD acq-time, FRC
+  %00000001 adcon0 c! \ Power on ADC, looking at AN0
+;
+
+: adc@ ( -- u ) 
+  %10 adcon0 mset \ Start conversion
+  begin %10 adcon0 mtst 0= until \ Wait until DONE
+  adresl @
+;
+ 
+: wait ( -- )
+  #500 ms
+;
+
+: main ( -- )
+  init 
+  begin
+    adc@ u.
+    wait
+  key? until
+;
+
+\ Exercise the application, writing digitized values periodically
+\ until any key is pressed.
+decimal
+main 
+----
+
+Notes on this program:
+
+* Although not much needs to be done to set up the ADC, 
+  you really should read the ADC section of the datasheet
+  to get the full details of this configuration.
+
+* Lines 17 to 19 uses binary literals (with the `%` character) 
+  to show the configuration bits explicitly.
+
+* Line 24 conditionally repeats testing of the DONE bit for the ADC.
+
+* Line 25 fetches the full 10-bit result and leaves it on the stack
+  for use after the `adc@` word has finished.  
+  Because of the selected configuration of the ADC peripheral, 
+  the value will be right-justified in the 16-bit cell.
+
+* Line 35 invokes the `adc@` word and prints the numeric result.
+
+* Line 37 checks if a character has come in from the serial terminal.
+  If so, the loop is terminated and the main function returns control to
+  the FlashForth interpreter.
+
+
 ## PIC24FV32KA30X
 
+The analog-to-digital converter on the PIC24-series microcontrollers is a little more complex
+than that on the PIC18 series.
+There are more features to select and so there are more registers and bits to set, however, 
+the essential set-up tasks are similar.
+The following script sets up some word definitions that were developed with a view to using them 
+in a larger program. 
+The particular words are more verbose but also carry more information.
+
+// \code{}{../pic24/read-adc-pic24.txt}
+----
+-read-adc
+marker -read-adc
+\ Read and report the analog values on AN0 through AN3.
+
+\ Registers of interest on the PIC24FV32KA30x
+$0084 constant ifs0
+
+$02c0 constant trisa
+$02c2 constant porta
+$02c4 constant lata
+$02c6 constant odca
+
+$02c8 constant trisb
+$02ca constant portb
+$02cc constant latb
+$02ce constant odcb
+
+$0300 constant adc1buf0
+$0340 constant ad1con1
+$0342 constant ad1con2
+$0344 constant ad1con3
+$0348 constant ad1chs
+
+$04e0 constant ansa
+$04e2 constant ansb
+
+$0770 constant pmd1
+
+\ bit masks
+$0001 constant mADC1MD \ pmd1
+$0001 constant mDONE \ ad1con1
+$0002 constant mSAMP
+$8000 constant mADON
+$2000 constant mAD1IF
+
+
+: adc.init ( -- )
+  $0003 trisa mset \ want RA0, RA1 as input
+  $0003 ansa mset
+  $0003 trisb mset
+  $0003 ansb mset
+  mADC1MD pmd1 mclr \ ensure module enabled
+  $0470 ad1con1 ! \ 12-bit, auto-convert
+  $0000 ad1con2 ! \ ADC references Vdd, Vss
+  $9f00 ad1con3 ! \ ADRC, 31-TAD acq-time
+  $0000 ad1chs ! \ neg input is Vss, pos input AN0
+  mADON ad1con1 mset \ Power on ADC
+  mAD1IF ifs0 mclr
+;
+
+: adc.close ( -- )
+  mADON ad1con1 mclr
+  mAD1IF ifs0 mclr
+;
+
+: adc.select ( u -- ) \ select positive input
+  $0003 and ad1chs ! \ limit selection to AN0 through AN3
+;
+
+: adc@ ( -- u )
+  mDONE ad1con1 mclr
+  mSAMP ad1con1 mset \ Start sampling
+  begin mDONE ad1con1 mtst until \ Wait until done.
+  adc1buf0 @
+;
+
+: adc@.filter ( -- u )
+  0 \ start of sum
+  8 for adc@ + next
+  8 /
+;
+ 
+: wait ( -- )
+  #500 ms
+;
+
+: adc.test ( -- )
+  adc.init 
+  begin
+    0 adc.select adc@.filter u.
+    1 adc.select adc@.filter u.
+    cr
+    wait
+  key? until
+  adc.close
+;
+
+\ Exercise the application, writing digitized values periodically
+\ until any key is pressed.
+\ decimal
+\ adc.test 
+----
+
+Notes on this program:
+
+* This script was part of a larger application for the monitoring of 2 pressure transducers, 
+  hence the setting up of just RA0 and RA1 at the start of `adc.init` at lines 38--41.
+
+* To save power the peripheral modules of a PIC24 are, by default, disabled.
+  You need to clear a module's disable bit (line 42) to do anything with it, 
+  even setting configuration registers.
+  The (separate) power-on bit still needs to be set to start up the converter.
+
 ## ATmega328P
+
+Although the analog-to-digital converter on the ATmega328P is different in detail,
+it has essentially the same functionality that can be abstracted.
+To control the ADC module, we can set up the same words 
+(`adc.init`, `adc.close`, `adc.select` and `adc@`) 
+as for the PIC24FV32KA302.
+
+// \code{}{../avr8-2016/read-adc-avr.txt}
+----
+-read-adc
+marker -read-adc
+\ Read and report analog voltages
+
+\ Registers of interest on the ATmega328P
+$78 constant adcl
+$79 constant adch
+$7a constant adcsra
+$7b constant adcsrb
+$7c constant admux
+$7e constant didr0
+
+\ Bit masks
+%10000000 constant mADEN
+%01000000 constant mADSC
+%00010000 constant mADIF
+
+: adc.clear.iflag ( -- )
+  mADIF adcsra mset \ clear by writing 1
+;
+
+: adc.init ( -- )
+  $3f didr0 c! \ Disable digital inputs 5 through 0
+  $40 admux c! \ AVcc as ref, right-adjust result, channel 0
+  $06 adcsra c! \ single conversion mode, prescaler 64
+  mADEN adcsra mset \ enable ADC
+  adc.clear.iflag
+;
+
+: adc.close ( -- )
+  mADEN adcsra mclr
+  adc.clear.iflag
+;
+
+: adc.wait ( -- )
+  begin mADSC adcsra mtst 0= until
+;
+
+: adc.select ( u -- )
+  adc.wait
+  $0f and \ channel selected by lower nibble
+  admux c@ $f0 and \ fetch upper nibble
+  or admux c!
+;
+
+: adc@ ( -- u )
+  adc.wait
+  mADSC adcsra mset
+  adc.wait
+  adcl c@ adch c@ #8 lshift or
+  adc.clear.iflag
+;
+
+: adc.test ( -- ) \ Exercise the analog converter
+  adc.init
+  begin
+    0 adc.select adc@ ." adc0 " u.
+    1 adc.select adc@ ." adc1 " u.
+    cr
+    #500 ms
+  key? until
+  adc.close
+;
+
+\ Now, start up the application...
+\ decimal
+\ adc.test
+----
+
+Notes on this program:
+
+* Although there are 6 analog pins available, the test word only exercises channels 0 and 1.
+
+* The input channel selection is controlled by the lower bits in the `admux` register.
+  Other than the 6 external analog input pins, you can select:
+  - the temperature sensor with bit pattern `%1000`,
+  - the internal band-gap reference with `%1110`, and
+  - and the zero-volt rail (GND) with `%1111`.
+
 
 # Counting button presses
 
+Example of sensing a button press, with debounce in software.
+
+// \code{}{../pic18/push-button.txt}
+----
+\ Use a push-button on RB0 to get user input.
+\ This button is labelled S3 on the PICDEM2+ board.
+-pb-demo
+marker -pb-demo
+
+$ff81 constant portb
+$ff8a constant latb
+$ff93 constant trisb
+
+variable count
+
+: init ( -- )
+  %01 trisb mset \ RB0 as input
+  %10 trisb mclr \ RB1 as output
+  %10 latb mclr
+;
+: RB1toggle ( -- )
+  latb c@ %10 xor latb c!
+; 
+: RB0@ ( -- c )
+  portb c@ %01 and
+;
+: button? ( -- f )
+  \ Check for button press, with software debounce.
+  \ With the pull-up in place, a button press will give 0.
+  RB0@ if
+    0
+  else
+    #10 ms
+    RB0@ if 0 else -1 then
+  then
+;
+
+: main ( -- )
+  0 count !
+  init
+  begin
+    button? if 
+      RB1toggle
+      count @ 1+ count !
+      count @ .
+      #200 ms \ allow time to release button
+    then
+    cwd
+  key? until
+;
+
+main  \ exercise the application
+----
+
+Notes on this program:
+
+* The `main` word clears the `count` variable, calls `init` to set up the hardware
+  and then loops, polling `RB0` and incrementing value of the `count` variable only when 
+  the button gets pressed.
+
+* If the pause after acknowledging the button press (line 42) is too long,
+  we may lose later button press events.  
+  This depends on how frantically we press S3.
+
+* Line 44 resets the watch-dog timer on each pass of the main loop.
+  If we don't press the RB0 button for a long time, the main loop would not otherwise pause 
+  and clear the watch-dog timer.
+  The watch-dog timer is cleared inside the `ms` word, however,
+  if the timer expires before being cleared, the microcontroller would be reset
+  and the FlashForth interpreter would restart.    
+
+
 # Counting button presses via interrupts
+
+Instead of polling the RB0 pin attached to the push button, as in the previous example,
+let's set up the hardware interrupt mechanism to invoke the increment action for us.
+
+// \code{}{../pic18/pb-interrupt.txt}
+----
+\ Use a push-button on RB0 to get user input, via an interrupt.
+\ This button is labelled S3 on the PICDEM2+ board.
+\ Don't have J6 connected because the LED on RB0 loads the pull-up.
+
+-pb-interrupt
+marker -pb-interrupt
+
+$ff93 constant trisb
+$fff2 constant intcon
+$fff1 constant intcon2
+
+variable count
+variable last-count
+
+: int0-irq
+  [i
+    %10 intcon mtst \ INT0IF
+    if 
+      count @ 1+ count !
+      %10 intcon mclr
+    then
+  i]
+;i
+
+: init ( -- )
+  %01 trisb mset \ RB0 as input, a button press will give 0.
+  %01000000 intcon2 mclr \ interrupt on falling edge
+  ['] int0-irq 0 int! \ install service word
+  %10 intcon mclr \ INT0IF cleared
+  %10000 intcon mset \ INT0 interrupt enable
+;
+
+: main ( -- )
+  0 count !
+  init
+  begin
+    count @ last-count @ - \ change?
+    if 
+      count @ dup last-count ! .
+    then
+    cwd
+  key? until
+;
+
+main  \ exercise the application
+----
+
+Notes on this program:
+
+* Again, we use the variable named `count` as the variable to be incremented
+  on pressing the button that pulls RB0 low.
+  The actual increment is done on line 19, inside the interrupt service word `int0-irq`.
+  The second variable, `last-count`, is used on line 36 in the `main` word,
+  to detect when the `count` variable changes.
+
+* The `init` word sets up the bits to enable the `INT0` external interrupt
+  to fire on a falling edge at RB0.
+
+* On line 28 in the `init` word, the execution token for our interrupt service word
+  is stored as the high-priority interrupt vector.
+  Because FlashForth supports only high-priority interrupts, the `0` is a dummy value 
+  but is still expected by the `int!` word.
+
+* Inside the interrupt-service word, we need to test the `INT0IF` interrupt flag
+  to see if it is our interrupt to handle and, if it is, do the appropriate work 
+  (of incrementing the `count` variable) and clearing the interrupt flag.
+  If you enable several interrupt sources, you need to provide a test and action for each.
+
+* The `main` word clears the `count` variable, calls `init` to set up the interrupt
+  mechanism and then loops, emitting the value of the `count` variable only when it changes.
+
 
 # Scanning a 4x3 matrix keypad
 
+We connect a 4x3 matrix keypad to PORTB, using RB0, RB1 and RB2 to drive the columns 
+while sensing the rows with RB4 through RB7.
+The schematic figure below shows the arrangement of keys and pins.
+
+image::keypad-4x3-portb.svg[width=40%]
+
+To minimize hardware, we have used the weak pull-ups on PORTB.
+Pressing a key while its column wire is held high does nothing, however,
+pressing a key on a column that is held low will result in its row
+being pulled low.
+
+// \code{}{../pic18/keypad.txt}
+----
+-keypad
+marker -keypad
+\ Display key presses from a 4x3 (telephone-like) keypad 
+\ on PIC18F26K22-I/SP
+
+$ff81 constant portb
+$ff8a constant latb
+$ff93 constant trisb
+$ff39 constant anselb
+$ff61 constant wpub
+$fff1 constant intcon2
+
+: init ( -- )
+  0 latb c!
+  %00000000 anselb c!    \ set as all digital I/O pins
+  %11110000 trisb c!     \ RB7-4 as input, RB3-0 as output
+  %11110000 wpub c!      \ pull-ups on RB7-4
+  %10000000 intcon2 mclr \ turn on pull-ups
+;
+
+flash 
+create key_chars 
+  char 1 c, char 2 c, char 3 c,
+  char 4 c, char 5 c, char 6 c,
+  char 7 c, char 8 c, char 9 c,
+  char * c, char 0 c, char # c,
+create key_scan_bytes
+  $7e c, $7d c, $7b c,
+  $be c, $bd c, $bb c,
+  $de c, $dd c, $db c,
+  $ee c, $ed c, $eb c,
+ram
+
+: scan_keys ( -- c )
+  \ Return ASCII code of key that is pressed
+  #12 for
+    key_scan_bytes r@ + c@ 
+    dup
+    latb c!
+    portb c@
+    = if 
+      \ key must be pressed to get a match
+      key_chars r@ + c@
+      rdrop
+      exit
+    then
+  next
+  0  \ no key was pressed
+;
+
+: keypad@ ( -- c ) 
+  \ Read keypad with simple debounce.
+  \ ASCII code is left on stack. 
+  \ Zero is returned for no key pressed or inconsistent scans.
+  scan_keys dup 
+  #20 ms 
+  scan_keys
+  = if exit else drop then
+  0 \ inconsistent scan results
+;
+         
+: main ( -- )
+  init
+  begin
+    keypad@
+    dup 
+    0= if 
+      drop  \ no key pressed 
+    else
+      emit  
+      #300 ms \ don't repeat key too quickly
+    then 
+  key? until
+;
+----
+
+Notes on this program:
+
+* In lines 21--31, we make use of character arrays to store (into the program memory)
+  the the ASCII code and the scan code for each key.
+  The scan code is made up of the 3-bit column pattern to be applied to RB2-RB0 and the
+  resulting 4-bit row-sense pattern (RB7-RB4) expected for the particular key if it is pressed.
+  RB3 is maintained high (and is of no consequence) for this 3-column keypad, however, 
+  it would be used for a 4x4 keypad.
+
+* Lines 36 and 47 make use of the for--next control construct to work through 
+  the set of 12 scan codes.
+
+* We should go further by making use a state-machine 
+  and also keeping track of the last key pressed.
+
+
 # Communicating with SPI devices
 
-## PIC24FV32KA30X
+The photograph below shows the Eleven AVR board driving a matrix display.
+This particular display board has an 8-by-8 LED matrix being controlled by
+a MAX7219 8-digit LED display driver.
 
-## ATmega328P
+image::eleven-driving-MAX7219-LED-matrix.jpeg[width=100%]
 
-## Words to drive a matrix display
+The MAX7219 has a serial data interface that can be driven by the SPI module
+within each of the microcontrollers.
+The timing diagram, taken directly from the MAXIM datasheet, 
+is shown below, along with the expect format for each 16-bit command.
+A command can be sent to the MAX7219 chip by taking the chip-select line low,
+sending two bytes via the SPI module and then taking the chip-select line high.
+A set of words for doing this 2-byte transfer and building the higher-level commands
+on top of that transfer is given after.
 
-# Communicating with I^2^C devices
+image::max7219-timing-diagram.svg[width=100%]
+
+The following sections define the words for using SPI peripherals for each of the microcontrollers 
+in master mode.
+The SPI module is initialized for mode 0 operation, with clock signal idling low, 
+and data lines changing as the clock signal transitions from active to idle. 
+This suits the MAX7219, which samples the data as the clock signal transitions from idle to active. 
+These words provide abstract the hardware registers and bits to provide a common vocabulary 
+for the interaction with SPI slave devices.
 
 ## PIC18FX6K22
 
+// \code{}{../pic18/spi2-base-k22.txt}
+----
+\ spi2-base-k22.txt
+\ Words to drive the SPI2 module on the PIC18F26K22
+\ PJ 31-Jan-2016
+-spi2-base
+marker -spi2-base
+
+\ Registers of interest for MSSP2
+$ff39 constant anselb
+$ff61 constant wpub
+$ff69 constant ssp2con3
+$ff6c constant ssp2con1
+$ff6d constant ssp2stat
+$ff6e constant ssp2add
+$ff6f constant ssp2buf
+$ff81 constant portb     
+$ff8a constant latb      
+$ff93 constant trisb     
+$ffa4 constant pir3
+$fff1 constant intcon2
+
+\ bit masks
+%0001 constant mSS2 ( RB0 )
+%0010 constant mSCK2 ( RB1 )
+%0100 constant mSDI2 ( RB2 )
+%1000 constant mSDO2 ( RB3 )
+$80 constant mRBPU
+$80 constant mSSP2IF
+$20 constant mSSP2EN
+
+\ !SS2 is on RB0
+: spi.select ( -- ) mSS2 latb mclr ;
+: spi.deselect ( -- ) mSS2 latb mset ;
+
+: spi.init ( -- ) \ set up SPI2 as master
+  $0f anselb mclr \ enable digital for RB3 through RB0
+  mSCK2 trisb mclr \ SCK as output
+  mSCK2 latb mclr \ clock idles low
+  mSDO2 trisb mclr \ MOSI as output
+  mSDI2 trisb mset \ MISO as input
+  $04 wpub c! \ activate pull-up on MISO (RB2) only
+  mRBPU intcon2 mclr \ enable pull-ups
+  mSS2 trisb mclr \ SS2 as output
+  mSS2 latb mset \ deselect
+  %01000000 ssp2stat c! \ SMP=0 CKE=1
+  %00100010 ssp2con1 c! \ enable, CKP=0, Fosc/64
+  mSSP2IF pir3 mclr
+  ssp2buf c@ drop \ will clear BF
+;
+: spi.close ( -- )
+  mSSP2EN ssp2con1 mclr
+  mSSP2IF pir3 mclr
+;
+: spi.wait ( -- ) 
+  begin mSSP2IF pir3 mtst until
+  mSSP2IF pir3 mclr
+;
+: spi.cexch ( c1 -- c2 ) ssp2buf c! spi.wait ssp2buf c@ ;
+: spi.csend ( c1 -- ) spi.cexch drop ;
+
+: spi.test ( -- ) 
+  spi.init
+  spi.select
+  $1c spi.csend \ an arbitrary byte
+  spi.deselect
+  spi.close
+;
+----
+
+Notes on this program:
+
+* For the PIC18F26K22, we choose to use the second SPI module 
+  because we have the pins associated with the first module assigned to the I^2^C communications.
+
+* Lines 40 and 41 activate the weak pull-up for the MISO pin.
+  Some slave devices, such as the MAX7219, do not have a data-out pin to talk back to the master.
+
+* The key word `spi.cexch` starts the exchange of a byte by writing it to the SPI data buffer.
+  On completion of the transfer, detected by the interrupt flag going high,
+  the incoming byte is fetched from the same buffer.
+  If there is no data line connected to the MISO pin, a byte of all 1s will be returned.
+  If you know that is the expected, it may be convenient to use the `spi.csend` which
+  does the same exchange but then drops the incoming byte.
+
+
 ## PIC24FV32KA30X
 
+// \code{}{../pic24/spi1-base-pic24fv32ka302.txt}
+----
+\ spi1-base-pic24fv32ka302.txt
+\ Words to drive the SPI1 module on the PIC24FV32KA302
+\ PJ 01-Feb-2016
+-spi1-base
+marker -spi1-base
+
+\ Registers of interest for SPI1
+$0070 constant cnpu2 \ CN16PUE is bit 0
+$0084 constant ifs0 \ SPI1IF is bit 10
+$02c8 constant trisb     
+$02ca constant portb     
+$02cc constant latb
+$02ce constant odcb     
+$0240 constant spi1stat
+$0242 constant spi1con1
+$0244 constant spi1con2
+$0248 constant spi1buf
+$04e2 constant ansb
+$0770 constant pmd1 \ SPI1MD is bit 3
+
+\ bit masks
+$8000 constant mSS1 ( RB15 )
+$0800 constant mSCK1 ( RB11 )
+$0400 constant mSDI1 ( RB10 )
+$2000 constant mSDO1 ( RB13 )
+$0400 constant mSPI1IF
+$8000 constant mSPIEN
+$0040 constant mSPIROV
+
+\ !SS1 is on RB15
+: spi.select ( -- ) mSS1 latb mclr ;
+: spi.deselect ( -- ) mSS1 latb mset ;
+
+: spi.init ( -- ) \ set up SPI1 as master
+  $ac ansb mclr \ enable digital for RB15,13,11,10
+  mSCK1 trisb mclr \ SCK as output
+  mSCK1 latb mclr \ clock idles low
+  mSDO1 trisb mclr \ MOSI as output
+  mSDI1 trisb mset \ MISO as input
+  $0001 cnpu2 ! \ activate pull-up on MISO (SDI1/CN16/RB10) only
+  mSS1 trisb mclr \ SS1 as output
+  mSS1 latb mset \ deselect
+  $0004 pmd1 mclr \ allow the module to be used
+  $013d spi1con1 ! \ MODE16=0, SMP=0 CKE=1, CKP=0, MSTEN=1 
+                   \ sec-prescale 1:1, pri-prescale 16:1
+  $0000 spi1con2 ! \ legacy mode
+  mSPIROV spi1stat mclr
+  mSPIEN spi1stat mset \ enable module
+  mSPI1IF ifs0 mclr
+;
+: spi.close ( -- )
+  mSPIEN spi1stat mclr
+  mSPI1IF ifs0 mclr
+;
+: spi.wait ( -- ) 
+  begin mSPI1IF ifs0 mtst until
+  mSPI1IF ifs0 mclr
+;
+: spi.cexch ( c1 -- c2 ) spi1buf c! spi.wait spi1buf c@ ;
+: spi.csend ( c1 -- ) spi.cexch drop ;
+
+: spi.test ( -- ) 
+  spi.init
+  spi.select
+  $1c spi.csend \ an arbitrary byte
+  spi.deselect
+  spi.close
+;
+----
+
+Notes on this program:
+
+* On this microcontroller, we choose to use the first SPI module, again because
+  it results in a convenient set of pins.
+  A later section in this tutorial uses the I^2^C pins on RB5 and RB6.
+
+* On lines 43 through 46, the SPI1 module is configured to behave much like the 
+  8-bit SPI module on the PIC18F26K22.
+  If we didn't care about making a common set of words for the three example processors
+  in this tutorial guide, 
+  we would probably make use of the advanced features on this 16-bit microcontroller.
+  These features include 16-bit transfer and enhanced buffering.
+
+
 ## ATmega328P
+
+// \code{}{../avr8-2016/spi-base-avr.txt}
+----
+\ spi-base-avr.txt
+\ Words to drive the SPI module on the ATmega328P
+\ PJ 31-Jan-2016
+-spi-base
+marker -spi-base
+
+\ Registers of interest
+$24 constant ddrb
+$25 constant portb
+$4c constant spcr
+$4d constant spsr
+$4e constant spdr
+
+\ bit masks
+%000100 constant mSS ( PB2 )
+%001000 constant mMOSI ( PB3 )
+%010000 constant mMISO ( PB4 )
+%100000 constant mSCK ( PB5 )
+$80 constant mSPIF
+$40 constant mWCOL
+
+\ !SS is on PB2
+: spi.select ( -- ) mSS portb mclr ;
+: spi.deselect ( -- ) mSS portb mset ;
+
+: spi.init ( -- ) 
+  mSCK ddrb mset \ SCK as output
+  mSCK portb mclr \ clock idles low
+  mMOSI ddrb mset \ MOSI as output
+  mMISO ddrb mclr \ MISO as input
+  mMISO portb mset \ activate pull-up on MISO
+  mSS ddrb mset \ SS as output
+  mSS portb mset \ deselect
+  $51 spcr c! \ enable as master with cpolarity 0, cphase 0, fosc/16
+  $00 spsr c! \ SPI2X=0 for fosc/16
+  spsr c@ drop spdr c@ drop \ will clear SPIF
+;
+: spi.close ( -- )
+  $00 spcr c!
+;
+: spi.wait ( -- ) begin mSPIF spsr mtst until ;
+: spi.cexch ( c1 -- c2 ) spdr c! spi.wait spdr c@ ;
+: spi.csend ( c1 -- ) spi.cexch drop ;
+
+: spi.test ( -- ) 
+  spi.init
+  spi.select
+  $1c spi.csend \ an arbitrary byte
+  spi.deselect
+  spi.close
+;
+----
+
+Here is a screenshot showing the record of the SPI communication pins on the ATmega328P 
+as it sends the single byte `0c`, as specified in the `spi-test` word.
+The SPI clock period is 1 microsecond.
+
+image::eleven-spi-test-avr-sending-0c-byte.png[width=100%]
+
+## Words to drive a matrix display
+
+Given the base words defined in the previous sections, any of the boards may drive the
+matrix display with the following words.
+The interesting commands are defined by line 20 and 
+the `disp-test-X` words are three examples of doing something with the display.
+
+// \code{}{../avr8-2016/led-matrix-display.txt}
+----
+\ led-matrix-display.txt
+\ Drive a MAX7219 display chip with 8x8 LED matrix
+-disp-max7219
+marker -disp-max7219
+
+: max7219.send ( c1 c2 -- )
+  swap spi.select spi.csend spi.csend spi.deselect
+;
+
+: disp.normal ( -- ) $0c $01 max7219.send ;
+: disp.shutdown ( -- ) $0c $00 max7219.send ;
+
+: disp.test.on ( -- ) $0f $01 max7219.send ;
+: disp.test.off ( -- ) $0f $00 max7219.send ;
+
+: disp.no.op ( -- ) $00 $00 max7219.send ;
+: disp.intensity ( c -- ) $0a swap max7219.send ;
+: disp.decode ( c -- ) $09 swap max7219.send ;
+: disp.scan.limit ( c -- ) $0b swap max7219.send ;
+: disp.set.digit ( cbits cdigit -- ) swap max7219.send ;
+
+: disp-test-1 ( -- ) \ all LEDs on full, 232mA needed
+  spi.init
+  disp.test.on
+  begin key? until
+  disp.test.off
+  spi.close
+;
+: disp-test-2 ( -- ) \ left 4 LEDs on first row, 42mA needed
+  spi.init
+  disp.normal
+  $03 disp.intensity
+  $00 disp.scan.limit
+  $f0 $01 disp.set.digit
+  begin key? until
+  disp.shutdown
+  spi.close
+;
+: disp-test-3 ( -- ) \ draw face, 18mA needed
+  spi.init
+  disp.normal
+  $01 disp.intensity
+  $07 disp.scan.limit
+  %00000000 $01 disp.set.digit
+  %01100110 $02 disp.set.digit
+  %00000000 $03 disp.set.digit
+  %00011000 $04 disp.set.digit
+  %00011000 $05 disp.set.digit
+  %10000001 $06 disp.set.digit
+  %01000010 $07 disp.set.digit
+  %00111100 $08 disp.set.digit
+  begin key? until
+  disp.shutdown
+  spi.close
+;
+----
+
+
+# Communicating with I^2^C devices
+
+Here are some words for using I^2^C (or Two-wire) peripherals for each of the microcontrollers
+in master mode.
+These words provide abstract the hardware registers and bits to provide a common vocabulary 
+for the interaction with I^2^C slave devices.
+
+## PIC18FX6K22
+
+// \code{}{../pic18/i2c-base-k22.txt}
+----
+\ i2c-base-k22.txt
+\ Low-level words for I2C master on PIC18F26K22
+\
+\ Modelled on the original i2c-base.txt for PIC18, 
+\ i2c-twi.frt from amforth and
+\ the datasheet for Microchip PIC18F26K22.
+\ Peter J.  2014-11-08
+
+-i2c-base-k22
+marker -i2c-base-k22
+hex ram
+
+\ Registers related to I2C operation of MSSP1
+$ff3a constant anselc
+$ff82 constant portc
+$ff8b constant latc
+$ff94 constant trisc
+$ff9e constant pir1
+$ffc5 constant ssp1con2
+$ffc6 constant ssp1con1
+$ffc7 constant ssp1stat
+$ffc8 constant ssp1add
+$ffc9 constant ssp1buf
+$ffca constant ssp1msk
+$ffcb constant ssp1con3
+
+\ Masks for bits
+%00000001 constant mSEN \ in ssp1con2
+%00000010 constant mRSEN
+%00000100 constant mPEN
+%00001000 constant mRCEN
+%00010000 constant mACKEN
+%00100000 constant mACKDT
+%01000000 constant mACKSTAT
+%00100000 constant mSSP1EN \ in ssp1con1
+%00000001 constant mBF \ in ssp1stat
+%00001000 constant mSSP1IF \ in pir1
+
+: i2c.init ( -- )
+  %00001000 ssp1con1 c! \ Master mode
+  [ Fcy #100 / 1- ] literal ssp1add c! \ Set clock frequency to 100 kHz
+  mSSP1IF pir1 mclr \ Clear interrupt bit
+  %00011000 trisc mset \ SCL1 on RC3, SDA1 on RC4
+  %00011000 anselc mclr
+  mSSP1EN ssp1con1 mset \ Enable hardware
+;
+
+: i2c.close ( -- )
+  mSSP1EN ssp1con1 mclr
+  mSSP1IF pir1 mclr
+;
+
+: i2c.wait ( -- ) \ Wait for interrupt flag and clear it
+  begin mSSP1IF pir1 mtst until
+  mSSP1IF pir1 mclr
+;
+
+: i2c.idle? ( -- f )
+  %00011111 ssp1con2 mtst \ ACKEN RCEN REN RSEN SEN
+  %100 ssp1stat mtst \ R/^W 
+  or 0=
+;
+
+: i2c.start ( -- ) \ Send start condition
+  begin i2c.idle? until
+  mSSP1IF pir1 mclr
+  mSEN ssp1con2 mset
+  i2c.wait
+;
+
+: i2c.rsen ( -- ) \ Send repeated start condition
+  mSSP1IF pir1 mclr
+  mRSEN ssp1con2 mset
+  i2c.wait
+;
+
+: i2c.stop ( -- ) \ Send stop condition
+  mSSP1IF pir1 mclr
+  mPEN ssp1con2 mset
+  i2c.wait
+;
+
+: i2c.buf.full? ( -- f ) 
+  mBF ssp1stat mtst
+;
+
+\ Write one byte to bus, leaves ACK bit.
+\ A value of 0 indicates ACK was received from slave device.
+: i2c.c! ( c -- f )
+  begin i2c.buf.full? 0= until
+  ssp1buf c!
+  begin i2c.buf.full? 0= until
+  begin i2c.idle? until
+  ssp1con2 c@ mACKSTAT and
+;
+
+\ Send ack bit.
+: i2c.ack.seq ( -- )
+  mACKEN ssp1con2 mset
+  begin mACKEN ssp1con2 mtst 0= until
+;
+
+\ Read one byte and ack for another.
+: i2c.c@.ack ( -- c )
+  mRCEN ssp1con2 mset
+  begin i2c.buf.full? until
+  mACKDT ssp1con2 mclr i2c.ack.seq \ ack
+  ssp1buf c@
+;
+
+ \ Read one last byte.
+: i2c.c@.nack ( -- c ) 
+  mRCEN ssp1con2 mset
+  begin i2c.buf.full? until
+  mACKDT ssp1con2 mset i2c.ack.seq \ nack
+  ssp1buf c@
+;
+
+\ Address slave for writing, leaves true if slave ready.
+: i2c.addr.write ( 7-bit-addr -- f )
+  1 lshift 1 invert and \ Build full byte with write-bit as 0
+  i2c.start i2c.c! 0=
+;
+
+\ Address slave for reading, leaves true if slave ready.
+: i2c.addr.read ( 7-bit-addr -- f )
+  1 lshift 1 or \ Build full byte with read-bit as 1
+  i2c.start i2c.c! 0=
+;
+
+\ Detect presence of device, leaving true if device present, 0 otherwise.
+\ We actually fetch a byte if the slave has acknowledged, then discard it. 
+: i2c.ping? ( 7-bit-addr -- f )
+  i2c.addr.read if i2c.c@.nack drop true else false then
+;
+----
+
+## PIC24FV32KA30X
+
+// \code{}{../pic24/i2c-base-pic24fv32ka30x.txt}
+----
+\ i2c-base-pic24fv32ka30x.txt
+\ Low-level words for I2C master on PIC24FV32KA302 and KA301
+\
+\ Modelled on i2c-base.txt for PIC18, i2c-twi.frt from amforth
+\ the Microchip PIC24 Family Reference Manual 
+\ and the datasheet for PIC24FV32KA304 family.
+\ Peter J.  2015-09-23
+
+-i2c-base
+marker -i2c-base
+hex ram
+
+\ Registers related to I2C operation of MSSP1
+$0086 constant ifs1
+$0200 constant i2c1rcv
+$0202 constant i2c1trn
+$0204 constant i2c1brg
+$0206 constant i2c1con
+$0208 constant i2c1stat
+$020a constant i2c1add
+$020c constant i2c1msk
+$02c8 constant trisb
+$02ca constant portb
+$02cc constant latb
+$02ce constant odcb
+$04e2 constant ansb
+$0770 constant pmd1
+
+\ Masks for bits
+$8000 constant mI2CEN \ in i2c1con
+%000001 constant mSEN
+%000010 constant mRSEN
+%000100 constant mPEN
+%001000 constant mRCEN
+%010000 constant mACKEN
+%100000 constant mACKDT
+$8000 constant mACKSTAT \ in i2c1stat
+$4000 constant mTRSTAT
+$0400 constant mBCL
+$0080 constant mIWCOL
+$0040 constant mI2COV
+%0001 constant mTBF
+%0010 constant mRBF
+%0010 constant mMI2C1IF \ in ifs1
+
+$0100 constant mRB8 \ SCL1 on RB8
+$0200 constant mRB9 \ SDA1 on RB9
+
+: i2c.init ( -- )
+  $80 pmd1 mclr \ Enable the I2C1 module
+  [ Fcy #100 / Fcy #10000 / - 1- ] literal i2c1brg c! \ Set clock to 100 kHz
+  mMI2C1IF ifs1 mclr \ Clear interrupt bit for master operation
+  %1100000000 trisb mset \ SCL1 on RB8, SDA1 on RB9
+  %1100000000 odcb mset
+  mI2CEN i2c1con mset \ Enable hardware
+;
+
+: i2c.close ( -- )
+  mI2CEN i2c1con mclr
+  mMI2C1IF ifs1 mclr
+;
+
+: i2c.bus.reset ( -- )
+  \ Manually reset the slave devices.
+  \ For use when a slave just won't let SDA1 go.
+  i2c.close
+  mRB9 trisb mset \ leave SDA1 float
+  mRB9 odcb mset
+  mRB8 trisb mclr \ drive SCL1 with digital output
+  mRB8 odcb mset
+  9 for 
+    mRB8 latb mclr 1 ms
+    mRB8 latb mset 1 ms
+  next
+  \ stop condition
+  mRB8 latb mclr
+  mRB9 trisb mclr
+  mRB9 latb mclr 1 ms
+  mRB8 latb mset
+  mRB9 latb mset 1 ms 
+  \ release bus
+  mRB8 trisb mset
+  mRB9 trisb mset
+;
+
+: i2c.wait ( -- ) \ Wait for interrupt flag and clear it
+  begin mMI2C1IF ifs1 mtst until
+  mMI2C1IF ifs1 mclr
+;
+
+: i2c.idle? ( -- f )
+  %00011111 i2c1con mtst \ ACKEN RCEN REN RSEN SEN
+  0=
+;
+
+: i2c.start ( -- ) \ Send start condition
+  begin i2c.idle? until
+  mMI2C1IF ifs1 mclr
+  mSEN i2c1con mset
+  i2c.wait
+;
+
+: i2c.rsen ( -- ) \ Send repeated start condition
+  mMI2C1IF ifs1 mclr
+  mRSEN i2c1con mset
+  i2c.wait
+;
+
+: i2c.stop ( -- ) \ Send stop condition
+  mMI2C1IF ifs1 mclr
+  mPEN i2c1con mset
+  i2c.wait
+;
+
+: i2c.tbuf.full? ( -- f ) 
+  mTBF i2c1stat mtst
+;
+
+: i2c.rbuf.full? ( -- f ) 
+  mRBF i2c1stat mtst
+;
+
+\ Write one byte to bus, leaves ACK bit.
+\ A value of 0 indicates ACK was received from slave device.
+: i2c.c! ( c -- f )
+  begin i2c.tbuf.full? 0= until
+  mMI2C1IF ifs1 mclr
+  i2c1trn c!
+  \ We wait for the interrupt because just waiting for the buffer
+  \ to be empty is unreliable if we look too soon.
+  i2c.wait
+  begin i2c.idle? until
+  i2c1stat @ mACKSTAT and
+;
+
+\ Send ack bit.
+: i2c.ack.seq ( -- )
+  mACKEN i2c1con mset
+  begin mACKEN i2c1con mtst 0= until
+;
+
+\ Read one byte and ack for another.
+: i2c.c@.ack ( -- c )
+  mRCEN i2c1con mset
+  begin i2c.rbuf.full? until
+  mACKDT i2c1con mclr i2c.ack.seq \ ack
+  i2c1rcv c@
+;
+
+ \ Read one last byte.
+: i2c.c@.nack ( -- c ) 
+  mRCEN i2c1con mset
+  begin i2c.rbuf.full? until
+  mACKDT i2c1con mset i2c.ack.seq \ nack
+  i2c1rcv c@
+;
+
+\ Address slave for writing, leaves true if slave ready.
+: i2c.addr.write ( 7-bit-addr -- f )
+  1 lshift 1 invert and \ Build full byte with write-bit as 0
+  i2c.start i2c.c! 0=
+;
+
+\ Address slave for reading, leaves true if slave ready.
+: i2c.addr.read ( 7-bit-addr -- f )
+  1 lshift 1 or \ Build full byte with read-bit as 1
+  i2c.start i2c.c! 0=
+;
+
+\ Detect presence of device, 
+\ leaving true if device present, 0 otherwise.
+\ We actually fetch a byte if the slave has acknowledged. 
+: i2c.ping? ( 7-bit-addr -- f )
+  i2c.addr.read if i2c.c@.nack drop true else false then
+;
+----
+
+## ATmega328P
+
+// \code{}{../avr8-2016/i2c-base-avr.txt}
+----
+\ i2c-base-avr.txt
+\ Low-level words for TWI/I2C on Atmega328P.
+\
+\ Modelled on i2c-twi.frt from amforth, 
+\ i2c_base.txt for FlashForth on PIC18
+\ and the Atmel datasheet, of course.
+\ Peter J.  2014-10-27
+
+-i2c-base
+marker -i2c-base
+hex ram
+
+\ Two-Wire-Interface Registers
+$b8 constant TWBR
+$b9 constant TWSR
+$bb constant TWDR
+$bc constant TWCR
+
+\ Bits in the Control Register
+%10000000 constant mTWINT
+%01000000 constant mTWEA
+%00100000 constant mTWSTA
+%00010000 constant mTWSTO
+%00001000 constant mTWWC
+%00000100 constant mTWEN
+%00000001 constant mTWIE
+
+: i2c.init ( -- ) \ Set clock frequency to 100kHz
+  %11 TWSR mclr \ prescale value = 1
+  [ Fcy #100 / #16 - 2/ ] literal TWBR c!
+  mTWEN TWCR mset
+;
+
+: i2c.wait ( -- ) \ Wait for operation to complete
+  \ When TWI operations are done, the hardware sets 
+  \ the TWINT interrupt flag, which we will poll.
+  begin TWCR c@ mTWINT and until 
+;
+
+: i2c.start ( -- ) \ Send start condition
+  [ mTWINT mTWEN or mTWSTA or ] literal TWCR c!
+  i2c.wait
+;
+
+: i2c.rsen ( -- ) \ Send repeated start condition
+  i2c.start \ AVR doesn't distinguish
+;
+
+: i2c.stop ( -- ) \ Send stop condition
+  [ mTWINT mTWEN or mTWSTO or ] literal TWCR c!
+;
+
+\ Write one byte to bus, returning 0 if ACK was received, -1 otherwise.
+: i2c.c! ( c -- f )
+  i2c.wait \ Must have TWINT high to write data
+  TWDR c!
+  [ mTWINT mTWEN or ] literal TWCR c!
+  i2c.wait
+  \ Test for arrival of an ACK depending on what was sent.
+  TWSR c@ $f8 and $18 xor 0= if 0 exit then \ SLA+W
+  TWSR c@ $f8 and $28 xor 0= if 0 exit then \ data byte
+  TWSR c@ $f8 and $40 xor 0= if 0 exit then \ SLA+R
+  -1 \ Something other than an ACK resulted
+;
+
+\ Read one byte and ack for another.
+: i2c.c@.ack ( -- c )
+  [ mTWINT mTWEN or mTWEA or ] literal TWCR c!
+  i2c.wait
+  TWDR c@
+;
+
+\ Read one last byte.
+: i2c.c@.nack ( -- c ) 
+  [ mTWINT mTWEN or ] literal TWCR c!
+  i2c.wait
+  TWDR c@
+;
+
+\ Address slave for writing, leaving true if slave ready.
+: i2c.addr.write ( 7-bit-addr -- f )
+  1 lshift 1 invert and \ Build full byte with write-bit as 0
+  i2c.start i2c.c! if false else true then
+;
+
+\ Address slave for reading, leaving true if slave ready.
+: i2c.addr.read ( 7-bit-addr -- f )
+  1 lshift 1 or \ Build full byte with read-bit as 1
+  i2c.start i2c.c! if false else true then
+;
+
+\ Detect presence of device, leaving true if slave responded.
+\ If the slave ACKs the read request, fetch one byte only.
+: i2c.ping? ( 7-bit-addr -- f )
+  1 lshift 1 or \ Build full byte with read-bit as 1
+  i2c.start i2c.c! 0= if i2c.c@.nack drop true else false then
+;
+----
 
 ## Notes on using the words
 
+* The word `i2c.init` is used to set up the I^2^C master peripheral for further activities.
+
+* I^2^C conversations begin by addressing a slave device for either reading or writing.
+  The words `i2c.addr.read` and `i2c.addr.write` are provided for this waking of the slave.
+  They leave a flag on the stack to indicate whether the slave device acknowledged being addressed.
+  If the slave device responded appropriately, you may proceed to read or write bytes.
+
+* There are two words for reading a byte from the bus.  
+  `i2c.c@.ack` reads a byte and asserts an acknowledge (ACK) to indicate to the slave device that
+  another byte will be read subsequently.
+  `i2c.c@.nack` reads a byte and asserts a NACK to indicate to the slave that no more bytes are wanted.
+
+* The word to send a byte to the slave device is `i2c.c!`.
+  This word leaves a flag to indicate the state of the ACK bit following the action of sending the byte.
+  If the slave asserted ACK, the flag will be `0`.
+  You may `drop` this flag if it not of interest to you.
+
+* There are lower-level words `i2c.start`, `i2c.rsen` and `i2c.stop` to assert
+  start, restart and stop conditions respectively.
+  These are used within the higher-level words mentioned above.
+
+* The utility word `i2c.ping?` attempts to address a slave and read a byte.
+  It leaves `true` if the slave responds, else `false`.
+
+* Sometimes when tinkering with a new I^2^C device,
+  you can get into a state of confusion such that the slave device will end up in some intermediate state
+  waiting for clock signals.
+  (This happens more often than I would like to admit.)
+  In this state, the slave device will no longer respond in a way that the master peripheral understands.
+  Rather than cycle the power to reset the slave device, it may be convenient to force the clocking
+  of the data bits through the bus and get the slave device back into an idle state.
+  The word `i2c.reset.bus` (in `i2c-base-pic24fv32ka30x.txt`) is provided to automate this
+  forced clocking.
+
 ## Detecting I^2^C devices
+
+Building on the base words for a particular microcontroller, the following program works on
+all of the microcontrollers discussed in this tutorial guide.
+It is convenient to run this program to to see if the device of interest is responding.
+There's no point trying to have a conversation with a device that doesn't respond to being addressed.  
+
+// \code{}{../pic18/i2c-detect.txt}
+----
+\ i2c-detect.txt
+\ Detect presence of all possible devices on I2C bus.
+\ Only the 7 bit address schema is supported.
+\
+\ Copied from amForth distribution (lib/hardware/)
+\ and lightly edited to suit FlashForth 5.0 on AVR.
+\ Builds upon i2c-base-xxxx.txt and doloop.txt.
+\ Peter J. 2014-10-27
+
+-i2c-detect
+marker -i2c-detect
+
+\ not all bitpatterns are valid 7bit i2c addresses
+: i2c.7bitaddr? ( a -- f)  $7 $78 within ;
+
+: i2c.detect   ( -- )
+    base @ hex
+    \ header line
+    cr 5 spaces $10 0 do i 2 u.r loop
+    $80 0 do
+      i $0f and 0= if
+        cr i 2 u.r [char] : emit space
+      then
+      i i2c.7bitaddr? if
+        i i2c.ping? if \ does device respond?
+            i 2 u.r
+          else
+            ." -- " 
+        then
+      else
+         ."    "
+      then
+    loop 
+    cr base !
+;
+
+\ With a lone Microchip TC74A0 sitting on the bus,
+\ the output looks like
+\ i2c.init  ok<$,ram> 
+\ i2c.detect 
+\      00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 
+\ 00 :                      -- -- -- -- -- -- -- -- -- 
+\ 10 : -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+\ 20 : -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+\ 30 : -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+\ 40 : -- -- -- -- -- -- -- -- 48 -- -- -- -- -- -- -- 
+\ 50 : -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+\ 60 : -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+\ 70 : -- -- -- -- -- -- -- --                         
+\  ok<$,ram> 
+\ i2c.stop  ok<$,ram> 
+----
+
 
 # Using I^2^C to get temperature measurements
 
+Using the words in `i2c-base-k22.txt` to control the MSSP peripheral in master mode, 
+one may talk to the TC74A5 temperature measurement chip on the PICDEM 2 PLUS
+and report sensor temperature.
+
+// \code{}{../pic18/read-tc74-2016.txt}
+----
+\ Read temperature from TC74 on PICDEM2+ board with PIC18F46K22-I/P.
+\ Modelled on Mikael Nordman's i2c_tcn75.txt.
+\ This program requires i2c-base-k22.txt to be previously loaded.
+-read-tc74
+marker -read-tc74
+
+%1001101 constant addr-TC74A5  \ 7-bit address for the chip
+
+: tc74-init ( -- )
+  \ Selects the temperature register for subsequent reads.
+  addr-TC74A5 i2c.addr.write if 0 i2c.c! drop then i2c.stop
+;
+: sign-extend ( c -- n )
+  \ If the TC74 has returned a negative 8-bit value,
+  \ we need to sign extend to 16-bits with ones.
+  dup $7f > if $ff80 or then
+;
+: degrees@ ( -- n )
+  \ Wake the TC74 and receive its register value.
+  addr-TC74A5 i2c.addr.read if i2c.c@.nack sign-extend else 0 then
+;
+: tc74-main ( -- ) 
+  i2c.init
+  tc74-init
+  begin
+    degrees@ . 
+    #1000 ms
+  key? until
+;
+
+\ Now, report temperature in degrees C 
+\ while we warm up the TC74 chip with our fingers...
+decimal tc74-main
+----
+
+With a Saleae Logic Analyser connected to the pins of the TC74A5, we can see the I^2^C 
+signals as a result of calling the `tc74-init` word.
+
+image::saleae-logic-read-tc74-init-binary-region.png[width=100%]
+
+A little later on, the `degrees@` word is invoked.  
+The returned binary value of `0b00010101` corresponds 
+to the very pleasant 21^o^C that existed in the back shed as this text was being written.
+
+image::saleae-logic-read-tc74-read-binary-region.png[width=100%]
+
+
 # Making high-resolution voltage measurements
+
+The Microchip MCP3422 is a \x03A3;\x0394;-ADC that can connected via I^2^C port.
+This neat little converter can measure voltages with a resolution of 18 bits 
+(at the lowest data rate of 3.75 samples per second) and includes
+a programmable gain amplifier.
+Being available in a surface-mount package only, it was convenient to use a prebuilt
+evaluation board, the green board between the home-built FlashForth demo board 
+and the fixed-voltage supply board.
+The MCP3422 evaluation board is connected to and powered from the I^2^C header on the
+FlashForth demo board.  
+Separately, the fixed-voltage supply board provides the measurement voltage 
+to channel 1 of the MCP3422 via a potentiometer that is set to give 1.024 V, 
+according to my (fairly cheap) multimeter.
+
+image::mcp3422-i2c-demo-with-pic18f26k22.jpeg[width=100%]
+
+// \code{}{../pic18/mcp3422-2016.txt}
+----
+\ mcp3422-2016.txt
+\ Play with mcp3422 eval board.
+\ PJ, 21-Oct-2013
+\     28-Apr-2014 PIC18F26K22 version
+\     27-Jan-2016 update to use latest i2c words
+\ Needs i2c-base-k22.txt and math.txt (to get m*/).
+
+-mcp3422
+marker -mcp3422
+
+$68 constant addr-mcp3422 \ 7-bit address
+
+: mcp3422-init ( -- )
+  \ $9c is config for 18-bit continuous conversions of ch 1
+  addr-mcp3422 i2c.addr.write if $9c i2c.c! drop then i2c.stop
+;
+
+: mcp3422@ ( -- d f ) \ Read the 18-bit result as 3 bytes
+  addr-mcp3422 i2c.addr.read 
+  if 
+    i2c.c@.ack                         \ only 2 bits in first byte
+    dup $3 > if $fffa or then          \ sign-extend to full cell
+    i2c.c@.ack $8 lshift i2c.c@.ack or \ next two bytes into one cell 
+    swap                               \ leave double result
+    i2c.c@.nack $80 and 0=             \ leave true if result is latest
+  else
+    0 0 0  \ device did not ack on address
+  then
+;
+
+: microvolts ( d1 -- d2 )
+  \ The least-significant bit corresponds to 15.625 microvolts
+  #125 #8 m*/
+;
+
+: (d.3) ( d -- )
+  swap over dabs
+  <# # # # [char] . hold #s rot sign #> 
+;
+
+: report ( d f -- ) \ Assuming decimal, print millivolt value
+  cr if ." new " else ." old " then 
+  microvolts (d.3) type space ." mV "
+;
+
+: mcp3422-run ( -- )
+  decimal
+  i2c.init mcp3422-init 
+  begin
+    mcp3422@ report
+    #1000 ms
+  key? until
+  hex
+;
+----
+
+Notes on this program:
+
+* `mcp3422-run` is the top-level word that initializes the hardware, then periodically
+  reads the MCP3422 data and reports the voltage (in millivolts) to the user terminal.
+  The program runs until a key is pressed.
+
+* The converted value is read from the MCP3422 as an 18-bit value in 2-complement format.
+  The word `mcp3422@` reads the data as three bytes from the I^2^C port and then 
+  shuffles it into a double-cell value that is left on the stack, along with a flag to indicate
+  whether the value sent by the MCP3422 happened to be the latest data.
+  If the MCP3422 did not respond to being addressed, zeros will be left on the stack in place
+  of the expected data.
+
+* The value is scaled to microvolts and then the resultant double value is output using the
+  pictured numeric output to have 3 decimal places so that it looks like a millivolt reading.
+  Several lines from the terminal look like the following:
+----
+new 1028.031 mV 
+new 1028.062 mV 
+new 1028.046 mV 
+----
+
+* This program builds upon the `i2c-base-k22` words
+  in order to communicate with the MCP3422. 
+  The code for scaling of the measured data requires 
+  the mixed-scale word `m*/` from the file `math.fs` provided by FlashForth.
+
 
 # An I^2^C slave example
 
+The MSSP in the PIC18F26K22 can also be used in slave mode.
+Here, the FlashForth demo board is presented as an I^2^C slave device to
+an Aardvark serial interface, acting as master.
+The UART communication is provided by a Future Technology Devices International
+USB TTL-serial cable.
+
+The core of the program is the `i2c_service` word which is invoked
+each time a serial-port event is flagged by the SSPIF bit in the PIR1 flag register.
+This word is an implementation of the state look-up approach detailed in 
+the Microchip Application Note AN734 
+_Using the PIC Devices’ SSP and MSSP Modules for Slave I2C Communication_.
+The rest of the program is there to provide (somewhat) interesting data 
+for the I^2^C master to read and to do something (light a LED)
+when the master writes suitable data to the slave.
+
+// \code{}{../pic18/i2c-slave.txt}
+----
+-i2c-slave
+marker -i2c-slave
+\ Make the FlashForth 26K22 demo board into an I2C slave.
+\ An I2C master can read and write to a buffer here,
+\ the least-significant bit of the first byte controls
+\ the LED attached to pin RB0.
+\
+\ Needs core.txt loaded.
+
+$ff81 constant portb
+$ff82 constant portc
+$ff8a constant latb
+$ff93 constant trisb
+$ff94 constant trisc
+$ff3a constant anselc
+
+: led_on ( -- )
+  %00000001 latb mset
+;
+: led_off ( -- )
+  %00000001 latb mclr
+;
+: err_led_on ( -- )
+  %00000010 latb mset
+;
+: err_led_off ( -- )
+  %00000010 latb mclr
+;
+
+\ Establish a couple of buffers in RAM, together with index variables.
+ram
+8 constant buflen
+\ Receive buffer for incoming I2C data.
+create rbuf buflen allot
+variable rindx
+: init_rbuf ( -- )
+  rbuf buflen erase
+  0 rindx !
+;
+: incr_rindx ( -- ) \ increment with wrap-around
+  rindx @ 1 + 
+  dup buflen = if drop 0 then
+  rindx !
+;
+: save_to_rbuf ( c -- )
+  rbuf rindx @ + c!
+  incr_rindx
+;
+
+\ Send buffer with something interesting for the I2C master to read. 
+create sbuf buflen allot
+variable sindx
+: incr_sindx ( -- ) \ increment with wrap-around
+  sindx @ 1 + 
+  dup buflen = if drop 0 then
+  sindx !
+;
+: init_sbuf ( -- ) \ fill with counting integers, for interest
+  buflen
+  for
+    r@ 1+
+    sbuf r@ + c!
+  next
+  0 sindx !
+;
+
+\ I2C-related definitions and code
+$ffc5 constant sspcon2
+$ffc6 constant sspcon1
+$ffc7 constant sspstat
+$ffc8 constant sspadd
+$ffc9 constant sspbuf
+$ff9e constant pir1
+
+\ PIR1 bits
+%00001000 constant sspif
+
+\ SSPSTAT bits
+%00000001 constant bf
+%00000100 constant r_nw
+%00001000 constant start_bit
+%00010000 constant stop_bit
+%00100000 constant d_na
+%01000000 constant cke
+%10000000 constant smp
+
+d_na start_bit or r_nw or bf or constant stat_mask
+
+\ SSPCON1 bits
+%00010000 constant ckp
+%00100000 constant sspen
+%01000000 constant sspov
+%10000000 constant wcol
+
+\ SSPCON2 bits
+%00000001 constant sen
+
+: i2c_init ( -- )
+  %11000 anselc mclr \ enable digital-in on RC3,RC4 (SCL1,SDA1)
+  %00011000 trisc mset \ RC3==SCL RC4==SDA
+  %00000110 sspcon1 c! \ Slave mode with 7-bit address
+  sen sspcon2 mset \ Clock stretching enabled
+  smp sspstat mset \ Slew-rate disabled
+  $52 1 lshift sspadd c! \ Slave address
+  sspen sspcon1 mset \ Enable MSSP peripheral
+;
+
+: release_clock ( -- )
+  ckp sspcon1 mset
+;
+
+: i2c_service ( -- )
+  \ Check the state of the I2C peripheral and react.
+  \ See App Note 734 for an explanation of the 5 states.
+  \ 
+  \ State 1: i2c write operation, last byte was address.
+  \ D_nA=0, S=1, R_nW=0, BF=1
+  sspstat c@ stat_mask and %00001001 =
+  if
+    sspbuf @ drop
+    init_rbuf
+    release_clock
+    exit
+  then
+  \ State 2: i2c write operation, last byte was data.
+  \ D_nA=1, S=1, R_nW=0, BF=1
+  sspstat c@ stat_mask and %00101001 =
+  if
+    sspbuf c@ save_to_rbuf
+    release_clock
+    exit
+  then
+  \ State 3: i2c read operation, last byte was address.
+  \ D_nA=0, S=1, R_nW=1
+  sspstat c@ %00101100 and %00001100 =
+  if
+    sspbuf c@ drop
+    0 sindx !
+    wcol sspcon1 mclr
+    sbuf sindx @ + c@ sspbuf c!
+    release_clock
+    incr_sindx
+    exit
+  then
+  \ State 4: i2c read operation, last byte was outgoing data.
+  \ D_nA=1, S=1, R_nW=1, BF=0
+  sspstat c@ stat_mask and %00101100 =
+  ckp sspcon1 mtst 0=
+  and
+  if
+    wcol sspcon1 mclr
+    sbuf sindx @ + c@ sspbuf c!
+    release_clock
+    incr_sindx
+    exit
+  then
+  \ State 5: master NACK, slave i2c logic reset.
+  \ From AN734: D_nA=1, S=1, BF=0, CKP=1, however,
+  \ we use just D_nA=1 and CKP=1, ignoring START bit.
+  \ This is because master may have already asserted STOP
+  \ before we service the final NACK on a read operation.
+  d_na sspstat mtst 0 > ckp sspcon1 mtst 0 > and
+  stop_bit sspstat mtst or
+  if
+    exit \ Nothing needs to be done.
+  then
+  \ We shouldn't arrive here...
+  err_led_on
+  cr ." Error "
+  ." sspstat " sspstat c@ u.
+  ." sspcon1 " sspcon1 c@ u.
+  ." sspcon2 " sspcon2 c@ u.
+  cr
+  begin again \ Hang around until watch-dog resets MCU.
+;
+
+
+: init ( -- )
+  %00000011 trisb mclr  \ want RB0,RB1 as output pins
+  init_rbuf
+  init_sbuf
+  i2c_init
+  led_on err_led_on #200 ms led_off err_led_off
+;
+
+: main ( -- )
+  cr ." Start I2C slave "
+  init
+  begin
+    sspif pir1 mtst 
+    if
+      sspif pir1 mclr 
+      i2c_service
+    then
+    rbuf c@ %00000001 and
+    if led_on else led_off then
+    cwd
+  key? until
+;
+
+\ ' main is turnkey
+----
+
+With a Saleae Logic Analyser connected, we can see the I^2^C 
+signals as a result of writing the byte `0x01` to turn on the LED.
+The following figure shows the data and clock signals from the time that the
+master asserts the START condition (green circle) 
+until it asserts the STOP condition (as indicated by the red square).
+
+image::i2c-aardvark-write-byte.png[width=100%]
+
+The clock frequency is 100 kHz and there is a 138 microsecond gap 
+between the ninth clock pulse of the address byte and
+the start of the pulses for the data byte.
+This gives an indication of the time needed to service each SSPIF event.
+
+A little later on, the Aardvark reads two bytes from the bus, as shown here.
+
+image::i2c-aardvark-read-2-bytes.png[width=100%]
+
+Zooming in, to show the finer annotation, the same signals are shown below.
+
+image::i2c-aardvark-read-2-bytes-zoom-to-start.png[width=100%]
+image::i2c-aardvark-read-2-bytes-zoom-to-nack.png[width=100%]
+
+Again, the inter-byte gap is 138 microseconds resulting in about 200 microseconds 
+needed to transfer each byte.
+This effective speed of 5 kbytes/s should be usable for many applications,
+since the I^2^C bus is typically used for low speed data transfer.
+
+Notes on this program:
+
+* Need to load `core.fs` before the source code of the `i2c-slave.txt`.
+
+* Slave examples found in documentation on the Web usually have the service function
+  written in the context of an interrupt service routine.
+  The MSSP can be serviced quite nicely without resorting to the use of interrupts,
+  however, you still have to check and clear the SSPIF bit for each event.
+
+* The implementation of the test for State 5 (Master NACK) is slightly
+  different to that described in AN734 because it was found that the master
+  would assert an I^2^C bus stop after the final NACK of a read operation
+  but before the MCU could service the SSPIF event.
+  This would mean that STOP was the most recent bus condition seen
+  by the MSSP and the START and STOP bits set to reflect this.
+  In the figures shown above, there is only about 12 microseconds between the ninth
+  clock pulse for the second read data byte and the Aardvark master asserting 
+  the STOP condition on the bus.
+  This period is very much shorter than the (approx.) 140 microseconds period 
+  needed by the slave firmware to service the associated SSPIF event.
+
+
 # Speed of operation -- bit banging
+
+All of this nice interaction and convenience has some costs.
+One cost is the number of MCU instruction cycles needed to process
+the Forth words.
+To visualize this cost, the following program defines a word `blink-forth` which
+toggles an IO pin using the high-level FlashForth words that fetch and store bit patterns into the
+port latch register.
+An alternative word `blink-asm` uses assembler instructions to achieve an equivalent effect, but faster,
+and a third word `blink-bits` uses the FlashForth `bit0:` and `bit1:` words
+to create high-level bit-manipulation words that also achieve full machine speed.
+
+## PIC18F26K22
+
+// \code{}{../pic18/speed-test.txt}
+----
+-speed-test
+marker -speed-test
+\ Waggle RB1 as quickly as we can, in both high- and low-level code.
+\ Before sending this file, we should send asm.txt so that we have
+\ the clrwdt, word available.  We also need bit.txt.
+
+$ff8a constant latb
+$ff93 constant trisb
+
+: initRB1
+  %10 trisb mclr \ RB1 as output
+  %10 latb mclr \ initially known state
+;
+
+\ high-level bit fiddling, presumably slow
+: blink-forth ( -- )
+  initRB1
+  begin
+    %10 latb c! 0 latb c! \ one cycle, on and off
+    %10 latb c! 0 latb c!
+    %10 latb c! 0 latb c!
+    %10 latb c! 0 latb c!
+    cwd \ We have to kick the watch dog ourselves.
+  again
+;
+
+\ low-level bit fiddling, via assembler
+: blink-asm ( -- )
+  initRB1
+  [
+  begin,
+    latb 1 a, bsf,  latb 1 a, bcf, \ one cycle, on and off
+    latb 1 a, bsf,  latb 1 a, bcf,
+    latb 1 a, bsf,  latb 1 a, bcf,
+    latb 1 a, bsf,  latb 1 a, bcf,
+    clrwdt, \ kick the watch dog
+  again,
+  ]
+;
+
+\ high-level bit fiddling with named bits
+latb #1 bit1: RB1-hi inlined
+latb #1 bit0: RB1-lo inlined
+: blink-bits ( -- )
+  initRB1
+  begin
+    RB1-hi RB1-lo \ one cycle
+    RB1-hi RB1-lo
+    RB1-hi RB1-lo
+    RB1-hi RB1-lo
+    cwd
+  again
+;
+----
+
+Notes on this program:
+
+* We have had to worry about clearing the watch-dog timer.
+  In the early examples, the FlashForth interpreter was 
+  passing through the pause state often enough to keep the watch-dog happy.
+  The words in this example give the FlashForth interpreter no time to pause
+  so we are responsible for clearing the watch-dog timer explicitly.
+
+* In the source code config file for the specific MCU, the watch-dog timer postscale
+  is set to 256.
+  With a 31.25 kHz oscillator frequency, this leads to a default timeout period
+  of a little over 1 second (32 microseconds X 128 X 256).
+
+* For the PIC18 MCU, the internal oscillator of 16 MHz was multiplied by the PLL
+  to get 64 MHz oscillator driving the MCU.  
+  With 4 clock cycles per instruction cycle, this gave an instruction period T~CY~ = 62.5 nanoseconds.
+  Current consumption by the microcontroller was about 14 mA, roughly double the value
+  when the interpreter is not doing much, just waiting for input.
+
+* The first screen image below shows the output signal for running the high-level
+  `blink-forth` word while the second image uses the assembler words.
+
+image::speed-test-forth-pic18f26k22.jpeg[width=50%]
+image::speed-test-asm-pic18f26k22.jpeg[width=50%]
+
+* For the `blink-forth` word, one on+off cycle of the LED executes in 6 words
+  and is seen (in the oscilloscope record) to require about 50 instruction cycles.
+  So, on average, each of these threaded Forth words is executed in about 8 MCU instruction cycles. 
+  Note that this overhead includes the cost of using 16-bit cells for the data.
+  Extra machine instructions are used to handle the upper bytes.
+  In other applications, where we actually want to handle 16-bit data, 
+  this will no longer be a penalty.
+
+* The assembler version has no overhead and the cycle time for the MCU
+  instructions defines the period of the output signal.
+  One on-off cycle requires 2 instructions so we see a short 125 nanosecond period.
+  This is fast enough that the capacitive loading on the output pin 
+  is noticeable in the oscilloscope trace.
+  Also, the time required for the machine instructions to clear the watch-dog timer
+  and the instruction jump back to the start of the loop 
+  now shows up clearly in the oscilloscope record.
+
+* The oscilloscope record for the `blink-bits` word is shown here.
+  With the bit-manipulation words `RB1-hi` and `RB1-lo` being
+  inlined, they also achieve full machine speed because the generated code is essentially
+  the same as for `blink-asm`.
+
+image::speed-test-named-bits-inlined-pic18f26k22.jpeg[width=50%]
+
 
 ## PIC24FV32KA302
 
+// \code{}{../pic24/speed-test-pic24fv32ka302.txt}
+----
+-speed-test
+marker -speed-test
+\ For the PIC24FV32KA302, waggle RB15 as quickly as we can, 
+\ in both high- and low-level code.
+\ Remember to load bit.txt before this file.
+
+$02c8 constant trisb
+$02ca constant portb
+$02cc constant latb
+$02ce constant odcb
+
+1 #15 lshift constant bit15
+
+: initRB15
+  bit15 trisb mclr \ RB15 as output
+  bit15 latb mclr \ initially known state
+;
+
+\ high-level bit fiddling, presumably slow
+: blink-forth ( -- )
+  initRB15
+  begin
+    bit15 latb ! 0 latb ! \ one cycle, on and off
+    bit15 latb ! 0 latb !
+    bit15 latb ! 0 latb !
+    bit15 latb ! 0 latb !
+    cwd \ We have to kick the watch dog ourselves.
+  again
+;
+
+\ low-level bit fiddling, via assembler
+: blink-asm ( -- )
+  initRB15
+  [
+  begin,
+    #15 latb bset,  #15 latb bclr, \ one cycle, on and off
+    #15 latb bset,  #15 latb bclr,
+    #15 latb bset,  #15 latb bclr,
+    #15 latb bset,  #15 latb bclr,
+    ] cwd [ \ kick the watch dog
+  again,
+  ]
+;
+
+\ high-level bit fiddling with named bits
+latb #15 bit1: RB15-hi inlined
+latb #15 bit0: RB15-lo inlined
+: blink-bits ( -- )
+  initRB15
+  begin
+    RB15-hi RB15-lo \ one cycle
+    RB15-hi RB15-lo
+    RB15-hi RB15-lo
+    RB15-hi RB15-lo
+    cwd
+  again
+;
+----
+
+Notes on this program:
+
+* The order of the assembler arguments is bit-number register-address op-code.
+  This is different to that seen in the PIC18 version of the program.
+
+* The MCU was configured for running off its internal 8 MHz oscillator with
+  the 4X PLL active and a 1:1 postscaling.  
+  This resulted in an instruction cycle period T~CY~ = 62.5 nanoseconds.
+
+* The first screen image below shows the output signal for running the high-level
+  `blink-forth` word while the second image uses the assembler words.
+ 
+image::speed-test-forth-pic24fv32ka302.jpeg[width=50%]
+image::speed-test-asm-pic24fv32ka302.jpeg[width=50%]
+
+* For the `blink-forth` word, one on+off cycle of the LED executes in 6 words
+  and is seen (in the oscilloscope record) to require about 42 instruction cycles.
+  So, on average, each of these threaded Forth words is executed by the 16-bit PIC24
+  in 7 MCU instruction cycles.
+  This illustrates a benefit of the 16-bit processor, 
+  since the 8-bit PIC18F26K22 required 50 MCU instruction cycles 
+  (and a correspondingly longer time of 3.08 microseconds) for the same effect.
+
+* The assembler version has no overhead and the cycle time for the MCU
+  instructions defines the period of the output signal.
+  One on-off cycle requires 2 instructions so we see a short 124 nanosecond period.
+
+* The oscilloscope record for the `blink-bits` word is shown here.
+  Again, the bit-manipulation words `RB15-hi` and `RB15-lo` also achieve full machine speed.
+
+image::speed-test-named-bits-inlined-pic24fv32ka302.jpeg[width=50%]
+
+
 ## ATmega328P
 
+// \code{}{../avr8-2016/speed-test.txt}
+----
+-speed-test
+marker -speed-test
+\ Waggle PB5 as quickly as we can, in both high- and low-level code.
+\ Before sending this file, we should send asm.txt and bit.txt.
+
+$0024 constant ddrb
+$0025 constant portb    \ RAM address
+$0005 constant portb-io \ IO-space address
+1 #5 lshift constant bit5
+
+: initPB5
+  bit5 ddrb mset \ set pin as output
+  bit5 portb mclr \ initially known state
+;
+
+: cwd ( -- ) [ wdr, ] ; inlined \ we might want to reset the watchdog
+
+\ high-level bit fiddling, presumably slow
+: blink-forth ( -- )
+  initPB5
+  begin
+    bit5 portb c! 0 portb c! \ one cycle, on and off
+    bit5 portb c! 0 portb c!
+    bit5 portb c! 0 portb c!
+    bit5 portb c! 0 portb c!
+    cwd
+  again
+;
+
+\ low-level bit fiddling, via assembler
+: blink-asm ( -- )
+  initPB5
+  [
+  begin,
+    portb-io #5 sbi,  portb-io #5 cbi, \ one cycle, on and off
+    portb-io #5 sbi,  portb-io #5 cbi,
+    portb-io #5 sbi,  portb-io #5 cbi,
+    portb-io #5 sbi,  portb-io #5 cbi,
+    wdr,
+  again,
+  ]
+;
+
+\ high-level bit fiddling with named bits
+portb #5 bit1: PB5-hi inlined
+portb #5 bit0: PB5-lo inlined
+: blink-bits ( -- )
+  initPB5
+  begin
+    PB5-hi PB5-lo \ one cycle
+    PB5-hi PB5-lo
+    PB5-hi PB5-lo
+    PB5-hi PB5-lo
+    cwd
+  again
+;
+----
+
+Notes on this program:
+
+* Except for names, this code is essentially the same as for the PIC18 and PIC24
+  versions of the exercise.  FlashForth abstracts away much of the instruction-set architecture
+  of the microcontroller, leaving us to focus on twiddling the bits of the peripheral hardware.
+
+* The MCU was configured for running with the 16 MHz crystal,
+  which resulted in a machine clock cycle period T~CY~ = 62.5 nanoseconds.
+
+* The first screen image below shows the output signal for running the high-level
+  `blink-forth` word while the second image uses the assembler words.
+
+image::speed-test-forth-atmega328-2016.jpeg[width=50%]
+image::speed-test-asm-atmega328-2016.jpeg[width=50%]
+
+* For the `blink-forth`, one on+off cycle of the LED executes in 6 words
+  and is seen (in the oscilloscope record) to require about 90 instruction cycles.
+  So, on average, each of these threaded Forth words is executed by the 8-bit AVR 
+  in 15 MCU instruction cycles. 
+
+* The assembler version has no overhead and the cycle time for the MCU
+  instructions defines the period of the output signal.
+  One on-off cycle requires 2 instructions (`sbi` and \verb!cbi!) each requiring 2 clock cycles,
+  so we see a short, quarter-microsecond period.
+
+* The oscilloscope record for the \verb!blink-bits! word is shown here.
+  It can be seen that the bit-manipulation words `PB5-hi` and `PB5-lo` achieve full machine speed.
+
+image::speed-test-named-bits-inlined-atmega328-2016.jpeg[width=50%]
+
+
 # Driving an Hitachi-44780 LCD controller
+
+The LCD in the photograph in the Development Boards section was driven with the following code.
+During the development of this example, a lesson was relearned -- that of reading 
+the data sheet &#x1F609;
+
+// \code{}{../pic18/xlcd.txt}
+----
+\ Exercise LCD on PICDEM2+ board.
+\ Remember to load bit.txt before this file.
+-xlcd
+marker -xlcd
+
+$ff80 constant porta
+$ff89 constant lata
+$ff92 constant trisa
+$ff83 constant portd
+$ff8c constant latd
+$ff95 constant trisd
+
+\ The LCD is operated in nibble mode.
+\ RA1 = Enable (E) pin
+\ RA2 = Read/Write (RW) pin
+\ RA3 = Register Select (RS) pin
+\ RD0 = DB4 on LCD
+\ RD1 = DB5
+\ RD2 = DB6
+\ RD3 = DB7
+
+portd constant dataport
+lata #1 bit0: Elo
+lata #1 bit1: Ehi
+lata #2 bit0: RWlo
+lata #2 bit1: RWhi
+lata #3 bit0: RSlo
+lata #3 bit1: RShi
+
+: data-port-in ( -- )
+  trisd c@ $0f or trisd c!
+;
+
+: data-port-out ( -- )
+  trisd c@ $f0 and trisd c!
+;
+
+: put-nibble ( c -- )
+  \ Make lower 4 bits of c appear on data port pins.
+  $0f and
+  dataport c@ $f0 and
+  or 
+  dataport c!
+;
+
+: short-delay ( -- ) 
+  18 for r@ drop next ;
+
+: Estrobe ( -- )
+  Ehi short-delay Elo 
+;
+
+: lcd-getc ( -- c )
+  \ Read the LCD register in two nibbles.
+  \ Remember to select the register line before calling this word.
+  data-port-in
+  RWhi short-delay
+  Ehi short-delay dataport c@ #4 lshift Elo short-delay \ high nibble
+  Ehi short-delay dataport c@ Elo short-delay \ low nibble
+  or \ assemble full byte and leave it on the stack
+  RWlo short-delay
+;
+
+: lcd-ready? ( -- f )
+  \ Read the command register and check busy bit.
+  RSlo short-delay 
+  lcd-getc $80 and 0=
+;
+
+: wait-for-lcd ( -- )
+  begin lcd-ready? cwd until
+;
+
+: lcd-putc ( c -- ) 
+  \ Write the LCD register in two nibbles.
+  \ Remember to select the register line before calling this word.
+  dup $f0 and #4 rshift \ high nibble left on top of stack
+  data-port-out
+  RWlo short-delay
+  put-nibble short-delay Estrobe short-delay
+  $0f and \ low nibble now left on top of stack
+  put-nibble short-delay Estrobe short-delay
+  data-port-in
+;
+
+: lcd-clear ( -- )
+  wait-for-lcd 
+  RSlo short-delay 
+  %00000001 lcd-putc
+;
+
+: lcd-home ( -- )
+  wait-for-lcd
+  RSlo short-delay 
+  %00000010 lcd-putc
+;
+
+: lcd-goto ( c -- )
+  \ Set the specified 7-bit data memory address.
+  wait-for-lcd
+  RSlo short-delay 
+  $80 or \ sets the highest bit for the command
+  lcd-putc
+;
+  
+: lcd-init ( -- )
+  data-port-in
+  Elo RWlo RSlo
+  %00001110 trisa mclr \ RS, RW and E as output
+  30 ms \ power-on delay
+  \ Begin "initialization by instruction"
+  \ Presumably, the LCD is in 8-bit interface mode.
+  %0011 put-nibble Estrobe 5 ms
+  %0011 put-nibble Estrobe 1 ms
+  %0011 put-nibble Estrobe 1 ms
+  \ Function set for 4-bit interface; it is still in 8-bit mode.
+  %0010 put-nibble Estrobe 1 ms
+  \ Now, we should be in 4-bit interface mode.
+  \ Function set for 4-bit interface, 2 display lines 5x7 font.
+  wait-for-lcd
+  %00101000 lcd-putc
+  \ Increment cursor after each byte, don't shift display.
+  wait-for-lcd
+  %00000110 lcd-putc
+  \ Display off
+  wait-for-lcd
+  %00001000 lcd-putc
+  \ Display clear
+  %00000001 lcd-putc
+  5 ms
+  \ End of "initialization by instruction"
+  \ Enable cursor and display, no blink.
+  wait-for-lcd
+  %00001110 lcd-putc 1 ms
+  wait-for-lcd
+;
+
+: lcd-emit ( c -- ) \ Write the byte into data memory.
+  wait-for-lcd
+  RShi short-delay 
+  lcd-putc
+;
+
+: lcd-type ( c-addr n -- ) \ send string
+  for c@+ lcd-emit next
+  drop 
+; 
+
+: main
+  ." Begin..."
+  lcd-init
+  cr ." lcd-init done."
+  s" Hello from" lcd-type
+  $40 lcd-goto
+  s" FlashForth 5.0" lcd-type
+  cr ." exercise done."
+;
+----
+
 
 [bibliography]
 = References
