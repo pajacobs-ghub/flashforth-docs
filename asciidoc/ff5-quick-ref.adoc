@@ -1,0 +1,231 @@
+= FlashForth 5 Quick Reference for PIC and AVR Microcontrollers
+Port of 2016 LaTeX document -- 2021-12-30
+:toc: right
+:stylesheet: ./readthedocs.css
+:sectnums:
+:imagesdir: ../figs
+:stem: latexmath
+:eqnums:
+
+
+:leveloffset: +1
+
+= Interpreter
+The outer interpreter looks for words and numbers delimited by whitespace. 
+Everything is interpreted as a word or a number.  
+Numbers are pushed onto the stack.
+Words are looked up and acted upon.
+Names of words are limited to 15 characters.
+Some words are compile-time use only and cannot be used interpretively.
+These are {\compileonly coloured blue}.
+
+= Data and the stack
+The data stack (S:) is directly accessible and has 16-bit cells for holding numerical values.
+Functions get their arguments from the stack and leave their results there as well.
+There is also a return address stack (R:) that can be used for temporary storage.
+
+== Notation
+
+[cols=2]
+|===
+| `n, n1, n2, n3`
+| Single-cell integers (16-bit).
+
+| `u, u1, u2`
+|  Unsigned integers (16-bit).
+
+| `x, x1, x2, x3`
+| Single-cell item (16-bit).
+
+| `c`
+| Character value (8-bit).
+
+| `d ud`
+| Double-cell signed and unsigned (32-bit).
+
+|`t ut`
+| Triple-cell signed and unsigned (48-bit).
+
+| `q uq`
+| Quad-cell signed and unsigned (64-bit).
+
+| `f`
+| Boolean flag: 0 is false, -1 is true.
+
+| `flt flt1 flt3`
+| Floating-point value (32-bit). PIC24-30-33 only, with build option.
+
+| `addr, addr1, addr2`
+| 16-bit addresses.
+
+| `a-addr`
+| cell-aligned address.
+
+| `c-addr`
+| character or byte address.
+
+| `addr.d`
+| 32-bit address.
+|===
+
+== Numbers and values
+
+[cols=2]
+|===
+| `2`
+| Leave integer two onto the stack. `( -- 2 )`
+
+| `#255`
+| Leave decimal 255 onto the stack. `( -- 255 )`
+
+| `%11`
+| Leave integer three onto the stack. `( -- 3 )`
+
+| `$10`
+| Leave integer sixteen onto the stack. `( -- 16 )`
+
+| `23.`
+| Leave double number on the stack. `( -- 23 0 )`
+
+| `decimal`
+| Set number format to base 10. `( -- )`
+
+| `hex`
+| Set number format to hexadecimal. `( -- )`
+
+| `bin`
+| Set number format to binary. `( -- )`
+
+| `s>d`
+| Sign extend single to double number. `( n -- d )` +
+  Since double numbers have the most significant bits
+  in the cell above the least significant bits, you can
+  just `drop` the top cell to recover the single number,
+  provided that the value is not too large to fit in a
+  single cell.
+
+| `d>q`
+| Extend double to quad-cell number. `( d -- q )` +
+  Requires `qmath.fs` to be loaded.  PIC18, PIC24-30-33.
+|===
+
+== Displaying data
+
+[cols=2]
+|===
+| `.`
+| Display a number. `( n -- )`
+
+| `u.`
+| Display u unsigned. `( u -- )`
+
+| `u.r`
+| Display u with field width n, 0<n<256. `( u n -- )`
+
+| `d.`
+| Display double number.  `( d -- )`
+
+| `ud.`
+| Display unsigned double number. `( ud -- )`
+
+| `.s`
+| Display stack content (nondestructively).
+
+| `.st`
+| Emit status string for base, current data section,
+  and display the stack contents. `( -- )`
+
+| `?`
+| Display content at address. `( addr -- )` PIC24-30-33
+
+| `dump`
+| Display memory from address, for u bytes. `( addr u -- )`
+|===
+
+
+== Stack manipulation
+
+[cols=2]
+|===
+| `dup`
+| Duplicate top item. `( x -- x x )`
+
+| `?dup`
+| Duplicate top item if nonzero. `( x -- 0 \| x x )`
+
+| `swap`
+| Swap top two items. `( x1 x2 -- x2 x1 )`
+
+| `over`
+| Copy second item to top. `( x1 x2 -- x1 x2 x1 )`
+
+| `drop`
+| Discard top item. `( x -- )`
+
+| `nip`
+| Remove x1 from the stack. `( x1 x2 -- x2 )`
+
+| `rot`
+| Rotate top three items. `( x1 x2 x3 -- x2 x3 x1 )`
+
+| `tuck`
+| Insert x2 below x1 in the stack. `( x1 x2 -- x2 x1 x2 )`
+
+| `pick`
+| Duplicate the u-th item on top. `( xu ... x0 u -- xu ... x0 xu )`
+
+| `2dup`
+| Duplicate top double-cell item. `( d -- d d )`
+
+| `2swap`
+| Swap top two double-cell items. `( d1 d2 -- d2 d1 )`
+
+| `2over`
+| Copy second double item to top. `( d1 d2 -- d1 d2 d1 )`
+
+| `2drop`
+| Discard top double-cell item. `( d -- )`
+
+| `>r`
+| Send to return stack. `S:( n -- ) R:( -- n )` compile only
+
+| `r>`
+| Take from return stack. `S:( -- n ) R:( n -- )` compile only
+
+| `r@`
+| Copy top item of return stack. `S:( -- n ) R:( n -- n )` compile only
+
+| `rdrop`
+| Discard top item of return stack. `S:( -- ) R:( n -- )` compile only
+
+| `sp@`
+| Leave data stack pointer. `( -- addr )`
+
+| `sp!`
+| Set the data stack pointer to address. `( addr -- )`
+|===
+
+
+[bibliography]
+= Bibliography
+
+This guide assembled by Peter Jacobs, School of Mechanical Engineering,
+The University of Queensland, February-2016 as Report 2016/02.
+Update 2018-04-09, Ported to ASCIIDOC 2022-01-02.
+
+It is a remix of material from the following sources: +
+
+* FlashForth v5.0 source code and word list by Mikael Nordman
+http://flashforth.com/
+
+* EK Conklin and ED Rather _Forth Programmer's Handbook_ 3rd Ed. 2007 FORTH, Inc.
+
+* L Brodie _Starting Forth_ 2nd Ed., 1987 Prentice-Hall Software Series.
+
+* Robert B. Reese _Microprocessors from Assembly Language to C Using the PIC18Fxx2_ 
+Da Vinci Engineering Press, 2005.
+
+* Microchip _16-bit MCU and DSC Programmer’s Reference Manual_ Document DS70157F, 2011.
+
+* Atmel _8-bit AVR Insturction Set_ Document 08561-AVR-07/10.
+
