@@ -927,107 +927,99 @@ ram variable icnt1
 # The P register
 
 The P register can be used as a variable or as a pointer. 
-It can be used in conjunction with !for!..!next! 
+It can be used in conjunction with `for` ... `next` 
 or at any other time.
-\begin{tabular}{@{}ll@{}}
-?!p?  | Store address to P(ointer) register. !( addr -- )! 
-!@p!  | Fetch the P register to the stack. !( -- addr )! 
-{\compileonly?!p>r?}  | Push contents of P to return stack and 
-             | store new address to P. !( addr -- ) ( R: -- addr )! 
-{\compileonly!r>p!}  | Pop from return stack to P register. !( R: addr -- )!  
-!p+! | Increment P register by one. !( -- )! 
-!p2+!  | Add 2 to P register. !( -- )! 
-!p++!  | Add n to the p register. !( n -- )! 
-?p!?  | Store x to the location pointed to 
-           | by the p register. !( x -- )! 
-!pc!!  | Store c to the location pointed to 
-            | by the p register. !( c -- )! 
-!p@!  | Fetch the cell pointed to 
-           | by the p register. !( -- x )! 
-!pc@!  | Fetch the char pointed to  
-            | by the p register. !( -- c )! 
-\end{tabular}
-In a definition, ?!p>r? and !r>p! should always be used 
-to allow proper nesting of words.
 
-\bigskip
+[cols="1,2"]
+|===
+| Word    | Result
+| `!p`    | Store address to P(ointer) register. `( addr -- )` 
+| `@p`    | Fetch the P register to the stack. `( -- addr )` 
+| `!p>r`  | Push contents of P to return stack and store new address to P. +
+            `( addr -- ) ( R: -- addr )` 
+| `r>p`   | Pop from return stack to P register. `( R: addr -- )`  
+| `p+`    | Increment P register by one. `( -- )` 
+| `p2+`   | Add 2 to P register. `( -- )` 
+| `p++`   | Add n to the p register. `( n -- )` 
+| `p!`    | Store x to the location pointed to by the p register. `( x -- )` 
+| `pc!`   | Store c to the location pointed to by the p register. `( c -- )` 
+| `p@`    | Fetch the cell pointed to by the p register. `( -- x )` 
+| `pc@`   | Fetch the char pointed to by the p register. `( -- c )` 
+|===
+In a definition, `!p>r` and `r>p` should always be used 
+to allow proper nesting of words.
 
 # Characters
 
-\begin{tabular}{@{}ll@{}}
-!digit?!  | Convert char to a digit according to base. 
-               | !( c -- n f )! 
-!digit!   | Convert n to ascii character value. !( n -- c )! 
-!>pr!     | Convert  a character to an ASCII value. !( c -- c )! 
-               | Nongraphic characters converted to a dot. 
-!char! \textit{char} | Parse a character and leave ASCII value. !( -- n )! 
-                          | For example: !char A!  !( -- 65 )! 
-{\compileonly![char]!} \textit{char} | Compile inline ASCII character. !( -- )! 
-\end{tabular}
-
-\medskip
+[cols="1,2"]
+|===
+| Code            | Result
+| `digit?`        | Convert char to a digit according to base. `( c -- n f )` 
+| `digit`         | Convert n to ascii character value. `( n -- c )` 
+| `>pr`           | Convert a character to an ASCII value. `( c -- c )` +
+                    Nongraphic characters converted to a dot. 
+| `char` _char_   | Parse a character and leave ASCII value. `( -- n )` + 
+                    For example: `char A`  `( -- 65 )` 
+| `[char]` _char_ | Compile inline ASCII character. `( -- )` _compile only_
+|===
 
 ## Strings
 
-Some of these words come from !core.txt!.
+Some of these words come from `core.fs`.
 
-\begin{tabular}{@{}ll@{}}
-{\compileonly!s" !} \textit{text}!"! | Compile string into flash. !( -- )! 
-                                 | At run time, leaves address and length. 
-                                 | !( -- addr u )! 
-{\compileonly!." !} \textit{text}!"! | Compile string to print into flash. !( -- )! 
-!place! | Place string from a1 to a2 
-             | as a counted string. !( addr1 u addr2 -- )! 
-% !count! | Leave the address and length of text portion 
-%              | of a counted string !( addr1 -- addr2 n )! 
-!n=!  | Compare strings in RAM(!addr!) and Flash(!nfa!). 
-           | Leave true if strings match, !n < 16!. 
-           |  !( addr nfa u -- f )! 
-!scan! | Scan string until !c! is found. 
-            | !c-addr! must point to RAM and !u < 255!.
-            | !( c-addr u c -- caddr1 u1 )! 
-!skip! | Skip chars until !c! not found. 
-            | !c-addr! must point to RAM and !u < 255!.
-            | !( c-addr u c -- caddr1 u1 )! 
-!/string!  | Trim string. !( addr u n -- addr+n u-n )! 
-!>number!  | Convert string to a number. 
-                | !( 0 0 addr1 u1 -- ud.l ud.h addr2 u2 )! 
-!number?!  | Convert string to a number and flag. 
-                | !( addr1 -- addr2 0 | n 1 | d.l d.h 2 )! 
-                | Prefix: !#! decimal, !$! hexadecimal, !%! binary.
-!sign?!  | Get optional minus sign. 
-              | !( addr1 n1 -- addr2 n2 flag )!
-!type!  | Type line to terminal, !u < #256!. !( addr u -- )! 
-!accept! | Get line from the terminal. !( c-addr +n1 -- +n2 )! 
-              | At most n1 characters are accepted, until the line 
-              | is terminated with a carriage return. 
-!source! | Leave address of input buffer and number of 
-              | characters.  !( -- c-addr u )! 
-!evaluate! | Interpret a string in SRAM. !( addr n -- )! 
-!interpret! | Interpret the buffer. !( c-addr u -- )! 
-!parse! | Parse a word in TIB. !( c -- addr length )! 
-!word! | Parse a word in TIB and write length into TIB. 
-            | Leave the address of length byte on the stack. 
-            | !( c -- c-addr )! 
-\end{tabular}
+[cols="1,2"]
+|===
+| Code            | Result
+| `s"` _text_ `"` | Compile string into flash. `( -- )` _compile_only_ +
+                                  At run time, leaves address and length. `( -- addr u )`
+| `."` _text_ `"` | Compile string to print into flash. `( -- )` _compile_only_
+| `place`         | Place string from a1 to a2 as a counted string. !( addr1 u addr2 -- )! 
+// | `count`      | Leave the address and length of text portion of a counted string `( addr1 -- addr2 n )` 
+| `n=`            | Compare strings in RAM(`addr`) and Flash(`nfa`).  `( addr nfa u -- f )` +
+                    Leave true if strings match, `n < 16`. 
+| `scan`          | Scan string until `c` is found. `( c-addr u c -- caddr1 u1 )` +
+                    `c-addr` must point to RAM and `u < 255`.
+| `skip`          | Skip chars until `c` not found.  `( c-addr u c -- caddr1 u1 )` +
+                    `c-addr` must point to RAM and `u < 255`.
+| `/string`       | Trim string. `( addr u n -- addr+n u-n )` 
+| `>number`       | Convert string to a number. `( 0 0 addr1 u1 -- ud.l ud.h addr2 u2 )` 
+| `number?`       | Convert string to a number and flag. `( addr1 -- addr2 0 \| n 1 \| d.l d.h 2 )` +
+                    Prefix: `#` decimal, `$` hexadecimal, `%` binary.
+| `sign?`         | Get optional minus sign. `( addr1 n1 -- addr2 n2 flag )`
+| `type`          | Type line to terminal, `u < #256`. `( addr u -- )` 
+| `accept`        | Get line from the terminal. `( c-addr +n1 -- +n2 )` +
+                    At most n1 characters are accepted, until the line is terminated with a carriage return. 
+| `source`        | Leave address of input buffer and number of characters.  `( -- c-addr u )` 
+| `evaluate`      | Interpret a string in SRAM. `( addr n -- )` 
+| `interpret`     | Interpret the buffer. `( c-addr u -- )` 
+| `parse`         | Parse a word in TIB. `( c -- addr length )` 
+| `word`          | Parse a word in TIB and write length into TIB. 
+                    Leave the address of length byte on the stack. `( c -- c-addr )` 
+|===
 
 ## Pictured numeric output
 
 Formatted string representing an unigned double-precision integer 
-is constructed in the end of !tib!.
-\begin{tabular}{@{}ll@{}}
-{\compileonly!<#!}  | Begin conversion to formatted string. !( -- )! 
-{\compileonly!#!}  | Convert 1 digit to formatted string. !( ud1 -- ud2 )! 
-{\compileonly!#s!}  | Convert remaining digits. !( ud1 -- ud2 )! 
-           | Note that !ud2! will be zero. 
-{\compileonly!hold!}  | Append char to formatted string. !( c -- )! 
-!sign!  | Add minus sign to formatted string, if !n<0!. !( n -- )! 
-{\compileonly!#>!}  | End conversion, leave address and count 
-           | of formatted string. !( ud1 -- c-addr u )! 
-\end{tabular}
+is constructed in the end of `tib`.
+
+[cols="1,2"]
+|===
+| Word   | Result
+| `<#`   | Begin conversion to formatted string. `( -- )` _compile only_
+| `#`    | Convert 1 digit to formatted string. `( ud1 -- ud2 )` _compile only_
+| `#s`   | Convert remaining digits. `( ud1 -- ud2 )` _compile only_
+           Note that `ud2` will be zero. 
+| `hold` | Append char to formatted string. `( c -- )` _compile only_
+| `sign` | Add minus sign to formatted string, if `n<0`. `( n -- )` 
+| `#>`   | End conversion, leave address and count 
+           of formatted string. `( ud1 -- c-addr u )` _compile only_
+|===
+
 For example, the following:
-!-1 34. <# # # #s rot sign #> type! 
-results in !-034 ok!
+----
+-1 34. <# # # #s rot sign #> type
+---- 
+results in `-034 ok`
 
 
 # Interaction with the operator
