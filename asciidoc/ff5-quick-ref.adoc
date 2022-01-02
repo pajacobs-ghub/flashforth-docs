@@ -1025,208 +1025,212 @@ results in `-034 ok`
 # Interaction with the operator
 
 Interaction with the user is via a serial communications port, typically UART1.  
-Settings are 38400\,baud, 8N1, using Xon/Xoff handshaking. 
+Settings are 38400 baud, 8N1, using Xon/Xoff handshaking. 
 Which particular serial port is selected is determined by the
-vectors !'emit!, !'key! and !'key?!.
+vectors `'emit`, `'key` and `'key?`.
 
-\begin{tabular}{@{}ll@{}}
-!emit!  | Emit c to the serial port FIFO. !( c -- )! 
-             | FIFO is 46 chars. Executes pause. 
-!space!  | Emit one space character. !( -- )! 
-!spaces!  | Emit n space characters. !( n -- )! 
-!cr!  | Emit carriage-return, line-feed. !( -- )! 
-!key!  | Get a character from the serial port FIFO. 
-            | Execute pause until a character is available. !( -- c )! 
-!key?!  | Leave true if character is waiting 
-             | in the serial port FIFO.  !( -- f )! 
-\end{tabular}
+[cols="1,2"]
+|===
+| Word     | Result
+| `emit`   | Emit c to the serial port FIFO. `( c -- )` + 
+             FIFO is 46 chars. Executes pause. 
+| `space`  | Emit one space character. `( -- )` 
+| `spaces` | Emit n space characters. `( n -- )` 
+| `cr`     | Emit carriage-return, line-feed. `( -- )` 
+| `key`    | Get a character from the serial port FIFO. `( -- c )` +
+             Executes pause until a character is available. 
+| `key?`   | Leave true if character is waiting in the serial port FIFO. `( -- f )` 
+|===
 
 
 ## Serial communication ports
 
-\begin{tabular}{@{}ll@{}}
-!tx0!  | Send a character via UART0 on ATmega. !( c -- )! 
-!rx0!  | Receive a character from UART0 on ATmega. !( -- c )! 
-!rx0?!  | Leave !true! if the UART0 receive buffer 
-             | is not empty. ATmega !( -- f )! 
-!u0-!  | Disable flow control for UART1 interface. !( -- )! 
-!u0+!  | Enable flow control for UART1 interface, default. !( -- )! 
-!tx1!  | Send character to UART1. !( c -- )! 
-            | Buffered via an interrupt driven queue. 
-!rx1!  | Receive a character from UART1. !( -- c )! 
-            | Buffered by an interrupt-driven queue. 
-!rx1?!  | Leave !true! if the UART1 receive buffer 
-             | is not empty. !( -- f )! 
-!u1-!  | Disable flow control for UART1 interface. !( -- )! 
-!u1+!  | Enable flow control for UART1 interface, default. !( -- )! 
-!tx2!  | Send character to UART2. !( c -- )! 
-            | PIC24-30-33 
-!rx2!  | Receive a character from UART2. !( -- c )! 
-            | PIC24-30-33 
-!rx2?!  | Leave !true! if the UART1 receive buffer 
-             | is not empty. PIC24-30-33 !( -- f )! 
-!u2-!  | Disable flow control for UART2 interface. !( -- )! 
-!u2+!  | Enable flow control for UART2 interface, default. !( -- )! 
-!txu!  | Send a character via the USB UART. !( c -- )! 
-            | PIC18-USB 
-!rxu!  | Receive a character from the USB UART. !( -- c )! 
-            | PIC18-USB 
-!rxu?!  | Leave !true! if the USB UART receive buffer 
-             | is not empty. PIC18-USB !( -- f )! 
-\end{tabular}
+[cols="1,2"]
+|===
+| Word   | Result
+| `tx0`  | Send a character via UART0 on ATmega. `( c -- )` 
+| `rx0`  | Receive a character from UART0 on ATmega. `( -- c )` 
+| `rx0?` | Leave !true! if the UART0 receive buffer is not empty. `( -- f )` ATmega 
+| `u0-`  | Disable flow control for UART1 interface. `( -- )` 
+| `u0+`  | Enable flow control for UART1 interface, default. `( -- )` 
+| `tx1`  | Send character to UART1. `( c -- )` +
+           Buffered via an interrupt driven queue. 
+| `rx1`  | Receive a character from UART1. `( -- c )` + 
+           Buffered by an interrupt-driven queue. 
+| `rx1?` | Leave `true` if the UART1 receive buffer is not empty. `( -- f )` 
+| `u1-`  | Disable flow control for UART1 interface. `( -- )` 
+| `u1+`  | Enable flow control for UART1 interface, default. `( -- )` 
+| `tx2`  | Send character to UART2. `( c -- )` PIC24-30-33 
+| `rx2`  | Receive a character from UART2. `( -- c )` PIC24-30-33 
+| `rx2?` | Leave !true! if the UART1 receive buffer is not empty. `( -- f )` PIC24-30-33
+| `u2-`  | Disable flow control for UART2 interface. `( -- )` 
+| `u2+`  | Enable flow control for UART2 interface, default. `( -- )` 
+| `txu`  | Send a character via the USB UART. `( c -- )`  PIC18-USB 
+| `rxu`  | Receive a character from the USB UART. `( -- c )`  PIC18-USB 
+| `rxu?` | Leave `true` if the USB UART receive buffer is not empty. PIC18-USB `( -- f )` 
+|===
 
 
 ## Character queues on PIC24-30-33
 
-\begin{tabular}{@{}ll@{}}
-!cq:! \textit{name} | Create character queue. !( u -- )! 
-!cq0! | Initialize or reset queue. !( queue-addr -- )! 
-!>cq?! | Is there space available in queue. !( queue-addr -- f )! 
-!>cq! | Put character into queue. !( c queue-addr -- )! 
-!cq>?! | Number of characters in queue. !( queue-addr -- u )! 
-!cq>! | Get character from queue. !( queue-addr -- c )! 
-!u1rxq! | Leave UART1 RX queue address. !( -- queue-addr )! 
-!u1txq! | Leave UART1 TX queue address. !( -- queue-addr )! 
-!u2rxq! | Leave UART2 RX queue address. !( -- queue-addr )! 
-!u2txq! | Leave UART2 TX queue address. !( -- queue-addr )! 
-\end{tabular}
+[cols="1,2"]
+|===
+| Code         | Result
+| `cq:` _name_ | Create character queue. `( u -- )` 
+| `cq0`        | Initialize or reset queue. `( queue-addr -- )` 
+| `>cq?`       | Is there space available in queue. `( queue-addr -- f )` 
+| `>cq`        | Put character into queue. `( c queue-addr -- )` 
+| `cq>?`       | Number of characters in queue. `( queue-addr -- u )` 
+| `cq>`        | Get character from queue. `( queue-addr -- c )` 
+| `u1rxq`      | Leave UART1 RX queue address. `( -- queue-addr )` 
+| `u1txq`      | Leave UART1 TX queue address. `( -- queue-addr )` 
+| `u2rxq`      | Leave UART2 RX queue address. `( -- queue-addr )` 
+| `u2txq`      | Leave UART2 TX queue address. `( -- queue-addr )` 
+|===
 
 
 ## Other Hardware
 
-\begin{tabular}{@{}ll@{}}
-!cwd! | Clear the WatchDog counter. !( -- )! 
-           | PIC18, PIC24-30-33  
-!ei!  | Enable interrupts. !( -- )! 
-!di!  | Disable interrupts. !( -- )! 
-!ms!  | Pause for +n milliseconds. !( +n -- )! 
-!ticks!  | System ticks, 0--ffff milliseconds. !( -- u )! 
-\end{tabular}
+[cols="1,2"]
+|===
+| Word    | Result
+| `cwd`   | Clear the WatchDog counter. `( -- )`  PIC18, PIC24-30-33  
+| `ei`    | Enable interrupts. `( -- )` 
+| `di`    | Disable interrupts. `( -- )` 
+| `ms`    | Pause for `+n` milliseconds. `( +n -- )` 
+| `ticks` | System ticks, 0--ffff milliseconds. `( -- u )` 
+|===
 
 
 # Multitasking
 
-Load the words for multitasking from !task.txt!.
+Load the words for multitasking from `task.fs`.
 
-\begin{tabular}{@{}ll@{}}
-!task:! | Define a new task in flash memory space 
-             | !( tibsize stacksize rstacksize addsize -- )! 
-             | Use !ram xxx allot! to leave space for the PAD 
-             | of the prevously defined task. 
-             | The OPERATOR task does not use PAD.
-!tinit! | Initialise a user area and link it 
-             | to the task loop. !( taskloop-addr task-addr -- )! 
-             | Note that this may only be executed from 
-             | the operator task. 
-!task!  | Leave the address of the task definition table. !( -- addr )! 
-!run!  | Makes a task run by inserting it after operator 
-            | in the round-robin linked list. !( task-addr -- )! 
-            | May only be executed from the operator task. 
-!end!  | Remove a task from the task list. !( task-addr -- )! 
-            | May only be executed from the operator task. 
-!single!  | End all tasks except the operator task. !( -- )! 
-               | Removes all tasks from the task list. 
-               | May only be executed from the operator task. 
-!tasks!  | List all running tasks. !( -- )! 
-!pause!  | Switch to the next task in the round robin task list. 
-              | Idle in the operator task if allowed by all tasks. !( -- )! 
-!his!  | Access user variables of other task. 
-            | !( task.addr vvar.addr -- addr )! 
-!load!  | Leave the CPU load on the stack. !( -- n )! 
-             | Load is percentage of time that the CPU is busy. 
-             | Updated every 256 milliseconds. 
-!load+! | Enable the load LED on AVR8. !( -- )! 
-!load-! | Disable the load LED on AVR8. !( -- )! 
-!busy!  | CPU idle mode not allowed. !( -- )! 
-!idle!  | CPU idle is allowed. !( -- )! 
-!operator!  | Leave the address of the operator task. !( -- addr )! 
-!ulink!  | Link to next task. !( -- addr )! 
-\end{tabular}
+[cols="1,2"]
+|===
+| Word       | Result
+| `task:`    | Define a new task in flash memory space. `( tibsize stacksize rstacksize addsize -- )` +
+               Use `ram xxx allot` to leave space for the PAD 
+               of the prevously defined task. 
+               The OPERATOR task does not use PAD.
+| `tinit`    | Initialise a user area and link it 
+               to the task loop. `( taskloop-addr task-addr -- )` +
+               Note that this may only be executed from 
+               the operator task. 
+| `task`     | Leave the address of the task definition table. `( -- addr )` 
+| `run`      | Makes a task run by inserting it after operator 
+               in the round-robin linked list. `( task-addr -- )` +
+               May only be executed from the operator task. 
+| `end`      | Remove a task from the task list. `( task-addr -- )` +
+               May only be executed from the operator task. 
+| `single`   | End all tasks except the operator task. `( -- )` +
+               Removes all tasks from the task list. 
+               May only be executed from the operator task. 
+| `tasks`    | List all running tasks. `( -- )` 
+| `pause`    | Switch to the next task in the round robin task list. `( -- )` +
+               Idle in the operator task if allowed by all tasks. 
+| `his`      | Access user variables of other task. `( task.addr vvar.addr -- addr )` 
+| `load`     | Leave the CPU load on the stack. `( -- n )` +
+               Load is percentage of time that the CPU is busy. 
+               Updated every 256 milliseconds. 
+| `load+`    | Enable the load LED on AVR8. `( -- )` 
+| `load-`    | Disable the load LED on AVR8. `( -- )` 
+| `busy`     | CPU idle mode not allowed. `( -- )` 
+| `idle`     | CPU idle is allowed. `( -- )` 
+| `operator` | Leave the address of the operator task. `( -- addr )` 
+| `ulink`    | Link to next task. `( -- addr )` 
+|===
 
-\bigskip
 
 # Structured Assembler
 
-To use many of the words listed in the following sections, load the text file !asm.txt!.
+To use many of the words listed in the following sections, load the text file `asm.fs`.
 The assembler for each processor family provides the same set of structured flow control words,
 however, the conditionals that go with these words are somewhat processor-specific.
-\begin{tabular}{@{}ll@{}}
-!if,! \textit{xxx} !else,! \textit{yyy} !then,! | Conditional execution. !( cc -- )! 
-!begin,! \textit{xxx} !again,! | Loop indefinitely. !( -- )! 
-!begin,! \textit{xxx} \textit{cc} !until,! | Loop until condion is true. !( -- )! 
-\end{tabular}
+
+[cols="1,2"]
+|===
+| Code                              | Result
+| `if,` _xxx_ `else,` _yyy_ `then,` | Conditional execution. `( cc -- )` 
+| `begin,` _xxx_ `again,`           | Loop indefinitely. `( -- )` 
+| `begin,` _xxx_ _cc_ `until,`      | Loop until condion is true. `( -- )` 
+|===
 
 
 # Assembler words for PIC18
 
 In the stack-effect notaion for the PIC18 family, 
-f is a file register address, 
-d is the result destination, 
-a is the access bank modifier, 
-and k is a literal value.
 
+- `f` is a file register address, 
+- `d` is the result destination, 
+- `a` is the access bank modifier, 
+- and `k` is a literal value.
 
 ## Conditions for structured flow control
 
-\begin{tabular}{@{}ll@{}}
-!cc,! | test carry !( -- cc )! 
-!nc,! | test not carry !( -- cc )! 
-!mi,! | test negative !( -- cc )! 
-!pl,! | test not negative !( -- cc )! 
-!z,! | test zero !( -- cc )! 
-!nz,! | test not zero !( -- cc )! 
-!ov,! | test overflow !( -- cc )! 
-!nov,! | test not overflow !( -- cc )! 
-!not,! | invert condition !( cc -- not-cc )! 
-\end{tabular}
-
-\medskip
+[cols="1,2"]
+|===
+| Word   | Result
+| `cc,`  | test carry `( -- cc )` 
+| `nc,`  | test not carry `( -- cc )` 
+| `mi,`  | test negative `( -- cc )` 
+| `pl,`  | test not negative `( -- cc )` 
+| `z,`   | test zero `( -- cc )` 
+| `nz,`  | test not zero `( -- cc )` 
+| `ov,`  | test overflow `( -- cc )` 
+| `nov,` | test not overflow `( -- cc )` 
+| `not,` | invert condition `( cc -- not-cc )` 
+|===
 
 ## Destination and access modifiers
 
-\begin{tabular}{@{}ll@{}}
-!w,! | Destination WREG !( -- 0 )! 
-!f,! | Destination file !( -- 1 )! 
-!a,! | Access bank !( -- 0 )! 
-!b,! | Use bank-select register !( -- 1 )! 
-\end{tabular}
+[cols="1,2"]
+|===
+| Word | Result
+| `w,` | Destination WREG `( -- 0 )` 
+| `f,` | Destination file `( -- 1 )` 
+| `a,` | Access bank `( -- 0 )` 
+| `b,` | Use bank-select register `( -- 1 )` 
+|===
 
 
 ## Byte-oriented file register operations
 
-\begin{tabular}{@{}ll@{}}
-!addwf,!  | Add WREG and f. !( f d a -- )! 
-!addwfc,!  | Add WREG and carry bit to f. !( f d a -- )! 
-!andwf,!  | AND WREG with f. !( f d a -- )! 
-!clrf,!  | Clear f. !( f a -- )! 
-!comf,!  | Complement f. !( f d a -- )! 
-!cpfseq,!  | Compare f with WREG, skip if equal. !( f a -- )! 
-!cpfsgt,!  | Compare f with WREG, skip if greater than. !( f a -- )! 
-!cpfslt,!  | Compare f with WREG, skip if less than. !( f a -- )! 
-!decf,!  | Decrement f. !( f d a -- )! 
-!decfsz,!  | Decrement f, skip if zero. !( f d a -- )! 
-!dcfsnz,!  | Decrement f, skip if not zero. !( f d a -- )! 
-!incf,!  | Increment f. !( f d a -- )! 
-!incfsz,!  | Increment f, skip if zero. !( f d a -- )! 
-!infsnz,!  | Increment f, skip if not zero. !( f d a -- )! 
-!iorwf,!  | Inclusive OR WREG with f. !( f d a -- )! 
-!movf,! | Move f. !( f d a -- )! 
-!movff,! | Move fs to fd. !( fs fd -- )! 
-!movwf,!  | Move WREG to f. !( f a -- )! 
-!mulwf,!  | Multiply WREG with f. !( f a -- )! 
-!negf,!  | Negate f. !( f a -- )! 
-!rlcf,!  | Rotate left f, through carry. !( f d a -- )! 
-!rlncf,!  | Rotate left f, no carry. !( f d a -- )! 
-!rrcf,!  | Rotate right f, through carry. !( f d a -- )! 
-!rrncf,!  | Rotate right f, no carry. !( f d a -- )! 
-!setf,!  | Set f. !( f d a -- )! 
-!subfwb,!  | Subtract f from WREG, with borrow. !( f d a -- )! 
-!subwf,!  | Subtract WREG from f. !( f d a -- )! 
-!subwfb,!  | Subtract WREG from f, with borrow. !( f d a -- )! 
-!swapf,!  | Swap nibbles in f. !( f d a -- )! 
-!tstfsz,!  | Test f, skip if zero. !( f a -- )! 
-!xorwf,!  | Exclusive OR WREG with f. !( f d a -- )! 
-\end{tabular}
+[cols="1,2"]
+|===
+| Word      | Result
+| `addwf,`  | Add WREG and f. `( f d a -- )` 
+| `addwfc,` | Add WREG and carry bit to f. `( f d a -- )` 
+| `andwf,`  | AND WREG with f. `( f d a -- )` 
+| `clrf,`   | Clear f. `( f a -- )` 
+| `comf,`   | Complement f. `( f d a -- )` 
+| `cpfseq,` | Compare f with WREG, skip if equal. `( f a -- )` 
+| `cpfsgt,` | Compare f with WREG, skip if greater than. `( f a -- )` 
+| `cpfslt,` | Compare f with WREG, skip if less than. `( f a -- )` 
+| `decf,`   | Decrement f. `( f d a -- )` 
+| `decfsz,` | Decrement f, skip if zero. `( f d a -- )` 
+| `dcfsnz,` | Decrement f, skip if not zero. `( f d a -- )` 
+| `incf,`   | Increment f. `( f d a -- )` 
+| `incfsz,` | Increment f, skip if zero. `( f d a -- )` 
+| `infsnz,` | Increment f, skip if not zero. `( f d a -- )` 
+| `iorwf,`  | Inclusive OR WREG with f. `( f d a -- )` 
+| `movf,`   | Move f. `( f d a -- )` 
+| `movff,`  | Move fs to fd. `( fs fd -- )` 
+| `movwf,`  | Move WREG to f. `( f a -- )` 
+| `mulwf,`  | Multiply WREG with f. `( f a -- )` 
+| `negf,`   | Negate f. `( f a -- )` 
+| `rlcf,`   | Rotate left f, through carry. `( f d a -- )` 
+| `rlncf,`  | Rotate left f, no carry. `( f d a -- )` 
+| `rrcf,`   | Rotate right f, through carry. `( f d a -- )` 
+| `rrncf,`  | Rotate right f, no carry. `( f d a -- )` 
+| `setf,`   | Set f. `( f d a -- )` 
+| `subfwb,` | Subtract f from WREG, with borrow. `( f d a -- )` 
+| `subwf,`  | Subtract WREG from f. `( f d a -- )` 
+| `subwfb,` | Subtract WREG from f, with borrow. `( f d a -- )` 
+| `swapf,`  | Swap nibbles in f. `( f d a -- )` 
+| `tstfsz,` | Test f, skip if zero. `( f a -- )` 
+| `xorwf,`  | Exclusive OR WREG with f. `( f d a -- )` 
+|===
 
 
 ## Bit-oriented file register operations
