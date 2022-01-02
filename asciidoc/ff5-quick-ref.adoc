@@ -92,7 +92,7 @@ There is also a return address stack (R:) that can be used for temporary storage
 |===
 | Word    | Result
 | `dup`   | Duplicate top item. `( x -- x x )`
-| `?dup`  | Duplicate top item if nonzero. `( x -- 0 \| x x )`
+| `?dup`  | Duplicate top item if nonzero. `( x -- 0 | x x )`
 | `swap`  | Swap top two items. `( x1 x2 -- x2 x1 )`
 | `over`  | Copy second item to top. `( x1 x2 -- x1 x2 x1 )`
 | `drop`  | Discard top item. `( x -- )`
@@ -202,7 +202,7 @@ For PIC18, these words require `core.fs`, `math.fs` and `qmath.fs`.
 | `0=`     |  Leave true if n is zero. `( n -- f )` Inverts logical value. 
 | `0<`     |  Leave true if n is negative. `( n -- f )` 
 // | `0>`  |  Leave true if n is positive. `( n -- f )` 
-| `within` | Leave true if xl \<= x < xh. `( x xl xh -- f )` 
+| `within` | Leave true if xl <= x < xh. `( x xl xh -- f )` 
 | `u<`     | Leave true if u1 < u2. `( u1 u2 -- f )` 
 | `u>`     | Leave true if u1 > u2. `( u1 u2 -- f )` 
 | `d=`     | Leave true if d1 d2 are equal. `( d1 d2 -- f )` 
@@ -225,6 +225,355 @@ For PIC18, these words require `core.fs`, `math.fs` and `qmath.fs`.
 | `lshift`  | Left shift by u bits. `( x1 u -- x2 )` 
 | `rshift`  | Right shift by u bits. `( x1 u -- x2 )` 
 |===
+
+# Memory
+
+Typically, the microcontroller has three distinct memory contexts: 
+Flash, EEPROM and SRAM.
+FlashForth unifies these memory spaces into a single 64kB address space.
+
+## PIC18 Memory map
+
+The address ranges are:
+[cols="1,2"]
+|===
+| Range    | Use
+| `$0000` -- `$ebff` | Flash 
+| `$ec00` -- `$efff` | EEPROM 
+| `$f000` -- `$ff5f` | SRAM, general use 
+| `$ff60` -- `$ffff` | SRAM, special function registers  
+|===
+
+The high memory mark for each context will depend on the particular device used.
+Using a PIC18F26K22 and the default values in `p18f-main.cfg` 
+for the UART version of FF, a total of 423 bytes is dedicated to the FF system.
+The rest (3473 bytes) is free for application use. 
+Also, the full 64kB of Flash memory is truncated to fit within the
+range specified above.
+
+## PIC24 Memory map
+
+A device with EEPROM will have its 64kB address space divided into:
+[cols="1,2"]
+|===
+| Range                          | Use
+| `$0000` -- `$07ff`             | SRAM, special function registers 
+| `$0800` -- `($0800+RAMSIZE-1)` | SRAM, general use
+| `($0800+RAMSIZE)` -- `$fbff`   | Flash 
+| `$fc00` -- `$ffff`             | EEPROM  
+|===
+The high memory mark for the Flash context will depend on the device.
+Also, the full Flash memory of the device may not be accessible.
+
+## AVR8 Memory map
+All operations are restricted to 64kB byte address space that is divided into:
+[cols="1,2"]
+|===
+| Range                                 | Use
+| `$0000` -- `(RAMSIZE-1)`              | SRAM 
+| `RAMSIZE` -- `(RAMSIZE+EEPROMSIZE-1)` | EEPROM 
+| `($ffff-FLASHSIZE+1)` -- `$ffff`      | Flash  
+|===
+The SRAM space includes the IO-space and special function registers.
+The high memory mark for the Flash context is set by the combined size
+of the boot area and FF kernel.
+
+## Memory Context
+
+[cols="1,2"]
+|===
+| Word     | Result
+| `ram`    | Set address context to SRAM. `( -- )` 
+| `eeprom` | Set address context to EEPROM. `( -- )` 
+| `flash`  | Set address context to Flash. `( -- )` 
+| `fl-`    | Disable writes to Flash, EEPROM. `( -- )` 
+| `fl+`    | Enable writes to Flash, EEPROM, default. `( -- )` 
+| `iflush` | Flush the flash write buffer. `( -- )` 
+// | `lock` | Disable writes to Flash, EEPROM. `( -- )` 
+| `here`   | Leave the current data section dictionary pointer. `( -- addr )` 
+| `align`  | Align the current data section dictionary pointer to cell boundary. `( -- )` 
+| `hi`     | Leave the high limit of the current data space. `( -- u )` 
+|===
+
+
+## Accessing Memory
+
+[cols="1,2"]
+|===
+| Word  | Result
+| `!`   | Store x to address. `( x a-addr -- )` 
+| `@`   | Fetch from address. `( a-addr -- x )` 
+| `@+`  | Fetch cell and increment address by cell size. `( a-addr1 -- a-addr2 x )`
+| `2!`  | Store 2 cells to address. `( x1 x2 a-addr -- )` 
+| `2@`  | Fetch 2 cells from address. `( a-addr -- x1 x2 )` 
+| `c!`  | Store character to address. `( c addr -- )` 
+| `c@`  | Fetch character from address. `( addr -- c )` 
+| `c@+` | Fetch char, increment address. `( addr1 -- addr2 c )` 
+| `+!`  | Add n to cell at address. `( n addr -- )` 
+| `-@`  | Fetch from addr and decrement addr by 2. `( addr1 -- addr2 x )` 
+| `>a`  | Write to the A register. `( x -- )`
+| `a>`  | Read from the A register. `( -- x )`
+|===
+
+## Accessing Extended (Flash) Memory
+[cols="1,2"]
+|===
+| Word  | Result
+| `x!`  | Store u to real flash address. `( u addr.d -- )` PIC18, AVR8 
+| `x!`  | Store u to real flash address. `( ud addr.d -- )` PIC24-30-33 
+| `x@`  | Fetch from real flash address. `( addr.d -- u )` PIC18, AVR8 
+| `x@`  | Fetch from real flash address. `( addr.d -- ud )` PIC24-30-33 
+|===
+
+## Accessing bits in RAM
+[cols="1,2"]
+|===
+| Word    | Result
+| `mset`  | Set bits in file register with mask c. `( c addr -- )` For PIC24-30-33, the mask is 16 bits. 
+| `mclr`  | Clear bits in file register with mask c. `( c addr -- )` 
+| `mtst`  | AND file register byte with mask c. `( c addr -- x )` 
+|===
+
+The following come from `bit.fs`
+[cols="1,2"]
+|===
+| `bit1:` _name_ | Define a word to set a bit. `( addr bit -- )` 
+| `bit0:` _name_ | Define a word to clear a bit. `( addr bit -- )` 
+| `bit?:` _name_ | Define a word to test a bit. `( addr bit -- )` +
+                   When executed, _name_ leaves a flag. `( -- f )` 
+|===
+
+# The Dictionary
+
+## Dictionary management
+
+[cols="1,2"]
+|===
+| Code                  | Result
+| `marker -my-mark`     | Mark the dictionary and memory allocation state with `-my-mark`. 
+| `-my-mark`            | Return to the dictionary and allotted-memory state that existed before `-my-mark` was created. 
+| `find` _name_         | Find name in dictionary. `( -- n )` 
+|                       | Leave 1 immediate, -1 normal, 0 not found. 
+| `forget` _name_       | Forget dictionary entries back to _name_. 
+| `empty`               | Reset all dictionary and allotted-memory pointers. `( -- )` 
+| `words`               | List all words in dictionary. `( -- )` 
+| `words` _xxx_         | List words containing _xxx_. `( -- )` 
+|===
+
+
+## Defining constants and variables
+
+[cols="1,2"]
+|===
+| Code                 | Result
+| `constant` _name_    | Define new constant. `( n -- )`  
+| `2constant` _name_   | Define double constant. `( x x -- )` 
+| _name_               | Leave value on stack. `( -- n )` 
+| `variable` _varname_ | Define a variable in the current data section. `( -- )` + 
+                         Use `ram`, `eeprom` or `flash` to set data section. 
+| `2variable` _name_   | Define double variable. `( -- )` 
+| _varname_            | Leave address on stack.  `( -- addr )` 
+| `value` _valname_    | Define value. `( n -- )` 
+| `to` _valname_       | Assign new value to _valname_. `( n -- )` 
+| _valname_            | Leave value on stack.  `( -- n )` 
+| `user` _name_        | Define a user variable at offset `+n`. `( +n -- )` 
+|===
+
+## Examples
+
+[cols="1,2"]
+|===
+| Code                    | Result
+| `ram`                   | Set SRAM context for variables and values.
+                            Be careful not to accidentally define variables in EEPROM or Flash memory.
+                            That memory wears quickly with multiple writes. 
+| `$ff81 constant portb`  | Define constant in Flash. 
+| `3 value xx`            | Define value in SRAM. 
+| `variable yy`           | Define variable in SRAM. 
+| `6 yy !`                | Store 6 in variable `yy`. 
+| `eeprom 5 value zz ram` | Define value in EEPROM. 
+| `xx yy zz portb yy @`   | Leaves `3 f172 5 ff81 6` on stack. 
+| `warm`                  | Warm restart clears SRAM data. 
+| `xx yy zz portb yy @`   | Leaves `0 f172 5 ff81 0` on stack. 
+| `4 to xx`               | Sets new value.  
+| `xx yy zz portb yy @`   | Leaves `4 f172 5 ff81 0` on stack. 
+| `hi here - u.`          | Prints the number of bytes free. 
+| `$ff8a constant latb`   | PortB latch for the PIC18. 
+| `$ff93 constant trisb`  | PortB direction-control register. 
+| `%00000010 trisb mclr`  | Sets RB1 as output.  
+| `latb 1 bit1: pb1-high` | Defines a word to set RB1 high. 
+| `pb1-high`              | Sets RB1 high. 
+|===
+
+## Defining compound data objects
+
+[cols="1,2"]
+|===
+| Code            | Result
+| `create` _name_ | Create a word definition and store the current data section pointer. 
+| `does>`         | Define the runtime action of a created word. _compile only_
+| `allot`         | Advance the current data section dictionary pointer by u bytes. `( u -- )` 
+| `,`             | Append x to the current data section. `( x -- )` 
+| `c,`            | Append c to the current data section. `( c -- )` 
+| `,"` _xxx_ `"`  | Append a string at HERE. `( -- )` 
+| `i,`            | Append x to the flash data section. `( x -- )` 
+| `ic,`           | Append c to the flash data section. `( c -- )` 
+| `cf,`           | Compile xt into the flash dictionary. `( addr -- )` 
+| `c>n`           | Convert code field addr to name field addr. `( addr1 -- addr2 )` 
+| `n>c`           | Convert name field addr to code field addr. `( addr1 -- addr2 )` 
+| `n>l`           | Convert `nfa` to `lfa`. `( nfa -- lfa )` Not implemented; use 2-! instead. 
+| `>body`         | Leave the parameter field address of the created word. `( xt -- a-addr )` 
+| `:noname`       | Define headerless forth code. `( -- addr )` 
+| `>xa`           | Convert a Flash virtual address to a real executable address. `( a-addr1 -- a-addr2 )` PIC24-30-33, ATmega 
+| `xa>`           | Convert a real executable address to a Flash virtual address. `( a-addr1 -- a-addr2 )` PIC24-30-33, ATmega 
+|=== 
+
+## Array examples
+
+[cols="2a,3"]
+|===
+| Code                         | Comments
+
+| 
+----
+ram
+----
+| We want these arrays made in RAM memory.  
+
+|
+----
+create my-array 20 allot
+my-array 20 $ff fill
+my-array 20 dump
+----
+| Create an array, fill it with 1s, and display its content.
+
+|
+----
+create my-cell-array
+  100 , 340 , 5 , 
+----
+| Initialise an array of cells.
+
+|
+----
+my-cell-array 2 cells + @
+----
+| Should leave 5. `( -- x )` 
+
+|
+----
+create my-byte-array 
+  18 c, 21 c, 255 c,
+----
+| Initialised an array of bytes. 
+
+|
+----
+my-byte-array 2 chars + c@
+----
+| Should leave 255. `( -- c )` 
+
+|
+----
+: mk-byte-array
+    create allot
+    does> + ;
+----
+| Make our own defining word to make byte array objects, as shown in the FF User's Guide.
+
+|
+----
+10 mk-byte-array my-bytes
+----
+| Creates an array object my-bytes, which has stack effect `( n -- addr )`.
+ 
+|
+----
+18 0 my-bytes c!
+----
+| Sets an element. The execution `0 my-bytes` leaves the address of the first byte element on the stack.
+  The execution of `c!` results in the number `18` being stored at that address.
+ 
+|
+----
+21 1 my-bytes c!
+----
+| Sets another.
+
+|
+----
+255 2 my-bytes c!
+----
+| And another.
+ 
+|
+----
+2 my-bytes c@
+----
+| Should leave 255. The execution of `2 my-bytes` leaves the address of the third byte element on the stack.
+  The execution of `c@` fetches the byte at that address.
+
+|
+----
+: mk-cell-array
+    create cells allot 
+    does> swap cells + ;
+----
+| Make a defining word, this time to make cell array objects.
+  Its stack effect is `( n -- )`
+
+|
+----
+5 mk-cell-array my-cells
+----
+| Creates an array object `my-cells` whose stack effect is `( n -- addr )`.
+
+|
+----
+3000 0 my-cells !
+----
+| Sets an element.
+ 
+|
+----
+45000 1 my-cells !
+----
+| ...and another.
+
+|
+----
+63000 2 my-cells !
+----
+| ...and another.
+ 
+|
+----
+1 my-cells @ .
+----
+| Should print `45000` 
+|===
+
+## Memory operations
+
+Some of these words come from `core.fs`.
+
+[cols="1,2"]
+|===
+| Code        | Result
+| `cmove`     | Move `u` bytes from address-1 to address-2. `( addr1 addr2 u -- )` +
+                Copy proceeds from low address to high address. 
+| `wmove`     | Move u cells from address-1 to address-2. `( addr1 addr2 u -- )` PIC24-30-33 only 
+| `fill`      | Fill u bytes with c starting at address. `( addr u c -- )` 
+| `erase`     | Fill u bytes with 0 starting at address. `( addr u -- )` 
+| `blanks`    | Fill u bytes with spaces starting at address. `( addr u -- )` 
+| `cells`     | Convert cells to address units. `( u -- u )` 
+| `chars`     | Convert chars to address units. `( u -- u )` 
+| `char+`     | Add one to address. `( addr1 -- addr2 )` 
+| `cell+`     | Add size of cell to address. `( addr1 -- addr2 )` 
+| `aligned`   | Align address to a cell boundary. `( addr -- a-addr )` 
+|===
+
 
 [bibliography]
 = Bibliography
