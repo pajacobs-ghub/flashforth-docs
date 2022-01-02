@@ -17,7 +17,7 @@ Numbers are pushed onto the stack.
 Words are looked up and acted upon.
 Names of words are limited to 15 characters.
 Some words are compile-time use only and cannot be used interpretively.
-These are {\compileonly coloured blue}.
+These are noted in the result column.
 
 = Data and the stack
 The data stack (S:) is directly accessible and has 16-bit cells for holding numerical values.
@@ -26,76 +26,37 @@ There is also a return address stack (R:) that can be used for temporary storage
 
 == Notation
 
-[cols=2]
+[cols="1,2"]
 |===
-| `n, n1, n2, n3`
-| Single-cell integers (16-bit).
-
-| `u, u1, u2`
-|  Unsigned integers (16-bit).
-
-| `x, x1, x2, x3`
-| Single-cell item (16-bit).
-
-| `c`
-| Character value (8-bit).
-
-| `d ud`
-| Double-cell signed and unsigned (32-bit).
-
-|`t ut`
-| Triple-cell signed and unsigned (48-bit).
-
-| `q uq`
-| Quad-cell signed and unsigned (64-bit).
-
-| `f`
-| Boolean flag: 0 is false, -1 is true.
-
-| `flt flt1 flt3`
-| Floating-point value (32-bit). PIC24-30-33 only, with build option.
-
-| `addr, addr1, addr2`
-| 16-bit addresses.
-
-| `a-addr`
-| cell-aligned address.
-
-| `c-addr`
-| character or byte address.
-
-| `addr.d`
-| 32-bit address.
+| Notation        | Meaning
+| `n, n1, n2, n3` | Single-cell integers (16-bit).
+| `u, u1, u2`     |  Unsigned integers (16-bit).
+| `x, x1, x2, x3` | Single-cell item (16-bit).
+| `c`             | Character value (8-bit).
+| `d ud`          | Double-cell signed and unsigned (32-bit).
+| `t ut`          | Triple-cell signed and unsigned (48-bit).
+| `q uq`          | Quad-cell signed and unsigned (64-bit).
+| `f`             | Boolean flag: 0 is false, -1 is true.
+| `flt flt1 flt3` | Floating-point value (32-bit). PIC24-30-33 only, with build option.
+| `addr, addr1, addr2` | 16-bit addresses.
+| `a-addr`        | cell-aligned address.
+| `c-addr`        | character or byte address.
+| `addr.d`        | 32-bit address.
 |===
 
 == Numbers and values
 
-[cols=2]
+[cols="1,2"]
 |===
-| `2`
-| Leave integer two onto the stack. `( -- 2 )`
-
-| `#255`
-| Leave decimal 255 onto the stack. `( -- 255 )`
-
-| `%11`
-| Leave integer three onto the stack. `( -- 3 )`
-
-| `$10`
-| Leave integer sixteen onto the stack. `( -- 16 )`
-
-| `23.`
-| Leave double number on the stack. `( -- 23 0 )`
-
-| `decimal`
-| Set number format to base 10. `( -- )`
-
-| `hex`
-| Set number format to hexadecimal. `( -- )`
-
-| `bin`
-| Set number format to binary. `( -- )`
-
+| Code      | Result
+| `2`       | Leave integer two onto the stack. `( -- 2 )`
+| `#255`    | Leave decimal 255 onto the stack. `( -- 255 )`
+| `%11`     | Leave integer three onto the stack. `( -- 3 )`
+| `$10`     | Leave integer sixteen onto the stack. `( -- 16 )`
+| `23.`     | Leave double number on the stack. `( -- 23 0 )`
+| `decimal` | Set number format to base 10. `( -- )`
+| `hex`     | Set number format to hexadecimal. `( -- )`
+| `bin`     | Set number format to binary. `( -- )`
 | `s>d`
 | Sign extend single to double number. `( n -- d )` +
   Since double numbers have the most significant bits
@@ -103,7 +64,6 @@ There is also a return address stack (R:) that can be used for temporary storage
   just `drop` the top cell to recover the single number,
   provided that the value is not too large to fit in a
   single cell.
-
 | `d>q`
 | Extend double to quad-cell number. `( d -- q )` +
   Requires `qmath.fs` to be loaded.  PIC18, PIC24-30-33.
@@ -111,100 +71,160 @@ There is also a return address stack (R:) that can be used for temporary storage
 
 == Displaying data
 
-[cols=2]
+[cols="1,2"]
 |===
-| `.`
-| Display a number. `( n -- )`
-
-| `u.`
-| Display u unsigned. `( u -- )`
-
-| `u.r`
-| Display u with field width n, 0<n<256. `( u n -- )`
-
-| `d.`
-| Display double number.  `( d -- )`
-
-| `ud.`
-| Display unsigned double number. `( ud -- )`
-
-| `.s`
-| Display stack content (nondestructively).
-
-| `.st`
-| Emit status string for base, current data section,
-  and display the stack contents. `( -- )`
-
-| `?`
-| Display content at address. `( addr -- )` PIC24-30-33
-
-| `dump`
-| Display memory from address, for u bytes. `( addr u -- )`
+| Word   | Result
+| `.`    | Display a number. `( n -- )`
+| `u.`   | Display u unsigned. `( u -- )`
+| `u.r`  | Display u with field width n, 0<n<256. `( u n -- )`
+| `d.`   | Display double number.  `( d -- )`
+| `ud.`  | Display unsigned double number. `( ud -- )`
+| `.s`   | Display stack content (nondestructively).
+| `.st`  | Emit status string for base, current data section, and display the stack contents. `( -- )`
+| `?`    | Display content at address. `( addr -- )` PIC24-30-33
+| `dump` | Display memory from address, for u bytes. `( addr u -- )`
 |===
 
 
 == Stack manipulation
 
-[cols=2]
+[cols="1,2"]
 |===
-| `dup`
-| Duplicate top item. `( x -- x x )`
-
-| `?dup`
-| Duplicate top item if nonzero. `( x -- 0 \| x x )`
-
-| `swap`
-| Swap top two items. `( x1 x2 -- x2 x1 )`
-
-| `over`
-| Copy second item to top. `( x1 x2 -- x1 x2 x1 )`
-
-| `drop`
-| Discard top item. `( x -- )`
-
-| `nip`
-| Remove x1 from the stack. `( x1 x2 -- x2 )`
-
-| `rot`
-| Rotate top three items. `( x1 x2 x3 -- x2 x3 x1 )`
-
-| `tuck`
-| Insert x2 below x1 in the stack. `( x1 x2 -- x2 x1 x2 )`
-
-| `pick`
-| Duplicate the u-th item on top. `( xu ... x0 u -- xu ... x0 xu )`
-
-| `2dup`
-| Duplicate top double-cell item. `( d -- d d )`
-
-| `2swap`
-| Swap top two double-cell items. `( d1 d2 -- d2 d1 )`
-
-| `2over`
-| Copy second double item to top. `( d1 d2 -- d1 d2 d1 )`
-
-| `2drop`
-| Discard top double-cell item. `( d -- )`
-
-| `>r`
-| Send to return stack. `S:( n -- ) R:( -- n )` compile only
-
-| `r>`
-| Take from return stack. `S:( -- n ) R:( n -- )` compile only
-
-| `r@`
-| Copy top item of return stack. `S:( -- n ) R:( n -- n )` compile only
-
-| `rdrop`
-| Discard top item of return stack. `S:( -- ) R:( n -- )` compile only
-
-| `sp@`
-| Leave data stack pointer. `( -- addr )`
-
-| `sp!`
-| Set the data stack pointer to address. `( addr -- )`
+| Word    | Result
+| `dup`   | Duplicate top item. `( x -- x x )`
+| `?dup`  | Duplicate top item if nonzero. `( x -- 0 \| x x )`
+| `swap`  | Swap top two items. `( x1 x2 -- x2 x1 )`
+| `over`  | Copy second item to top. `( x1 x2 -- x1 x2 x1 )`
+| `drop`  | Discard top item. `( x -- )`
+| `nip`   | Remove x1 from the stack. `( x1 x2 -- x2 )`
+| `rot`   | Rotate top three items. `( x1 x2 x3 -- x2 x3 x1 )`
+| `tuck`  | Insert x2 below x1 in the stack. `( x1 x2 -- x2 x1 x2 )`
+| `pick`  | Duplicate the u-th item on top. `( xu ... x0 u -- xu ... x0 xu )`
+| `2dup`  | Duplicate top double-cell item. `( d -- d d )`
+| `2swap` | Swap top two double-cell items. `( d1 d2 -- d2 d1 )`
+| `2over` | Copy second double item to top. `( d1 d2 -- d1 d2 d1 )`
+| `2drop` | Discard top double-cell item. `( d -- )`
+| `>r`    | Send to return stack. `S:( n -- ) R:( -- n )` _compile only_
+| `r>`    | Take from return stack. `S:( -- n ) R:( n -- )` _compile only_
+| `r@`    | Copy top item of return stack. `S:( -- n ) R:( n -- n )` _compile only_
+| `rdrop` | Discard top item of return stack. `S:( -- ) R:( n -- )` _compile only_
+| `sp@`   | Leave data stack pointer. `( -- addr )`
+| `sp``   | Set the data stack pointer to address. `( addr -- )`
 |===
 
+
+# Operators
+
+## Arithmetic with single-cell numbers
+
+Some of these words require `core.fs` and `math.fs`.
+
+[cols="1,2"]
+|===
+| Word      | Result
+| `+`       | Add. `( n1 n2 -- n1+n2 )` sum 
+| `-`       | Subtract. `( n1 n2 -- n1-n2 )` difference 
+| `*`       | Multiply. `( n1 n2 -- n1*n2 )` product 
+| `/`       | Divide. `( n1 n2 -- n1/n2 )` quotient 
+| `mod`     | Divide. `( n1 n2 -- n.rem )` remainder 
+| `/mod`    | Divide. `( n1 n2 -- n.rem n.quot )` 
+| `u/`      |  Unsigned 16/16 to 16-bit division. `( u1 u2 -- u2/u1 )` 
+| `u/mod`   | Unsigned division. `( u1 u2 -- u.rem u.quot )` 16-bit/16-bit to 16-bit  
+| `1`       | Leave one. `( -- 1 )` 
+| `1+`      | Add one. `( n -- n1 )` 
+| `1-`      | Subtract one. `( n -- n1 )` 
+| `2+`      | Add two.  `( n -- n1 )` 
+| `2-`      | Subtract 2 from n. `( n -- n1 )` 
+| `2*`      | Multiply by 2; Shift left by one bit. `( u -- u1 )` 
+| `2/`      | Divide by 2; Shift right by one bit. `( u -- u1 )` 
+| `*/`      | Scale. `( n1 n2 n3 -- n1*n2/n3 )` Uses 32-bit intermediate result. 
+| `*/mod`   | Scale with remainder. `( n1 n2 n3 -- n.rem n.quot )` Uses 32-bit intermediate result. 
+| `u*/mod`  | Unsigned Scale u1*u2/u3 `( u1 u2 u3 -- u.rem u.quot )` Uses 32-bit intermediate result. 
+| `abs`     | Absolute value. `( n -- u )` 
+| `negate`  | Negate n. `( n -- -n )` 
+| `?negate` | Negate n1 if n2 is negative. `( n1 n2 -- n3 )` 
+| `min`     | Leave minimum. `( n1 n2 -- n )` 
+| `max`     | Leave maximum. `( n1 n2 -- n )` 
+| `umin`    | Unsigned minimum. `( u1 u2 -- u )` 
+| `umax`    | Unsigned maximum. `( u1 u2 -- u )` 
+|===
+
+## Arithmetic with double-cell numbers
+
+Some of these words require `core.fs`, `math.fs` and `qmath.fs`.
+
+[cols="1,2"]
+|===
+| Word       | Result
+| `d+`       | Add double numbers. `( d1 d2 -- d1+d2 )` 
+| `d-`       | Subtract double numbers. `( d1 d2 -- d1-d2 )` 
+| `m+`       | Add single cell to double number.  `( d1 n -- d2 )` 
+| `m*`       | Signed 16*16 to 32-bit multiply.  `( n n -- d )` 
+| `d2*`      | Multiply by 2. `( d -- d )` 
+| `d2/`      | Divide by 2. `( d -- d )` 
+| `um*`      | Unsigned 16x16 to 32 bit multiply. `( u1 u2 -- ud )` 
+| `ud*`      | Unsigned 32x16 to 32-bit multiply. `( ud u -- ud )` 
+| `um/mod`   | Unsigned division. `( ud u1 -- u.rem u.quot )` 32-bit/16-bit to 16-bit 
+| `ud/mod`   | Unsigned division. `( ud u1 -- u.rem ud.quot )` 32-bit/16-bit to 32-bit 
+| `fm/mod`   | Floored division. `( d n -- n.rem n.quot )` 
+| `sm/rem`   | Symmetric division. `( d n -- n.rem n.quot )` 32-bit/16-bit to 16-bit. 
+| `m*/`      | Scale with triple intermediate result. `d2 = d1*n1/n2` `( d1 n1 n2 -- d2 )` 
+| `um*/`     | Scale with triple intermediate result. `ud2 = ud1*u1/u2` `( ud1 u1 u2 -- ud2)` 
+| `dabs`     | Absolute value. `( d -- ud )` 
+| `dnegate`  | Negate double number. `( d -- -d )` 
+| `?dnegate` | Negate d if n is negative. `( d n -- -d )` 
+|===
+
+## Arithmetic with triple- and quad-numbers
+
+For PIC18, these words require `core.fs`, `math.fs` and `qmath.fs`.
+
+[cols="1,2"]
+|===
+| Word     | Result
+| `q+`     | Add a quad to a quad. `( q1 q2 -- q3 )` For PIC24-30-33. 
+| `qm+`    | Add double to a quad. `( q1 d -- q2 )` For PIC18 and PIC24-30-33. 
+| `uq*`    | Unsigned 32x32 to 64-bit multiply. `( ud ud -- uq )` For PIC18 and PIC24-30-33. 
+| `ut*`    | Unsigned 32x16 to 48-bit multiply. `( ud u -- ut )` 
+| `ut/`    | Divide triple by single. `( ut u -- ud )` 
+| `uq/mod` | Divide quad by double. `( uq ud -- ud-rem ud-quot )` 
+|===
+
+## Relational
+
+[cols="1,2"]
+|===
+| Word     | Result
+| `=`      | Leave true if x1 x2 are equal. `( x1 x2 -- f )` 
+| `<>`     |  Leave true if x1 x2 are not equal. `( x1 x2 -- f )` 
+| `<`      |  Leave true if n1 less than n2. `( n1 n2 -- f )` 
+| `>`      |  Leave true if n1 greater than n2. `( n1 n2 -- f )` 
+| `0=`     |  Leave true if n is zero. `( n -- f )` Inverts logical value. 
+| `0<`     |  Leave true if n is negative. `( n -- f )` 
+// | `0>`  |  Leave true if n is positive. `( n -- f )` 
+| `within` | Leave true if xl \<= x < xh. `( x xl xh -- f )` 
+| `u<`     | Leave true if u1 < u2. `( u1 u2 -- f )` 
+| `u>`     | Leave true if u1 > u2. `( u1 u2 -- f )` 
+| `d=`     | Leave true if d1 d2 are equal. `( d1 d2 -- f )` 
+| `d0=`    | Leave true if d is zero. `( d -- f )` 
+| `d0<`    | Leave true if d is negative. `( d -- f )` 
+| `d<`     | Leave true if d1 < d2. `( d1 d2 -- f )` 
+| `d>`     | Leave true if d1 > d2. `( d1 d2 -- f )` 
+|===
+
+## Bitwise
+
+[cols="1,2"]
+|===
+| Word      | Result
+| `invert`  | Ones complement. `( x -- x )` 
+| `dinvert` | Invert double number.  `( du -- du )` 
+| `and`     | Bitwise and. `( x1 x2 -- x )` 
+| `or`      | Bitwise or. `( x1 x2 -- x )` 
+| `xor`     | Bitwise exclusive-or. `( x -- x )` 
+| `lshift`  | Left shift by u bits. `( x1 u -- x2 )` 
+| `rshift`  | Right shift by u bits. `( x1 u -- x2 )` 
+|===
 
 [bibliography]
 = Bibliography
