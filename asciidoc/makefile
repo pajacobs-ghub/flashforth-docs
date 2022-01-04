@@ -5,7 +5,7 @@ HTML_FILES = elements-of-flashforth-5.html \
 		ff5-tutorial-guide.html \
 		ff5-quick-ref.html
 
-WEB_REPO_DIR = $(HOME)/pajacobs-ghub.pajacobs-ghub.github.io/flashforth/
+WEB_REPO_DIR = $(HOME)/pajacobs-ghub.github.io
 
 build-html : $(HTML_FILES)
 	@echo "HTML files built"
@@ -20,7 +20,8 @@ ff5-quick-ref.html : ff5-quick-ref.adoc
 	asciidoctor ff5-quick-ref.adoc
 
 install : $(HTML_FILES)
-	rsync -av $(HTML_FILES) $(WEB_REPO_DIR)
+	rsync -av $(HTML_FILES) $(WEB_REPO_DIR)/flashforth/
+	rsync -av ../figs $(WEB_REPO_DIR)/
 
 clean :
 	- rm elements-of-flashforth-5.html
