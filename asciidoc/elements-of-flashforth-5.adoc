@@ -120,33 +120,10 @@ Here is a picture of the stack through the process.
 The second-top element of the stack is labelled `NOS` for _next on stack_. +
 [cols=6,options="header"]
 |===
-| word executed 
-|
-| `2`
-| `17`
-| `+`
-| `.`
-
-| stack result
-| `TOS`
-| `2`
-| `17`
-| `19`
-| &#x23B5;
-
-|
-| `NOS`
-| &#x23B5;
-| `2`
-| &#x23B5;
-|
-
-|
-|
-|
-| &#x23B5;
-|
-|
+| word executed |       | `2`      | `17`     | `+`      | `.`
+| stack result  | `TOS` | `2`      | `17`     | `19`     | &#x23B5;
+|               | `NOS` | &#x23B5; | `2`      | &#x23B5; |
+|               |       |          | &#x23B5; |          |
 |===
 
 We might also work in hexadecimal: +
@@ -270,29 +247,12 @@ The Forth input line +
 leaves the parameter stack in the state +
 [cols=3,options="header"]
 |===
-| cell number 
-| content 
-| comment
-
-| 0 
-| `-16` 
-| `TOS` (Top Of Stack)
-
-|1 
-| `73` 
-| `NOS` (Next On Stack)
-
-| 2 
-| `5`
-|
-
-| 3 
-| `2`
-|
-
-|
-| &#x23B5;
-|
+| cell number  | content  | comment
+| 0            | `-16`    | `TOS` (Top Of Stack)
+| 1            | `73`     | `NOS` (Next On Stack)
+| 2            | `5`      |
+| 3            | `2`      |
+|              | &#x23B5; |
 |===
 We will usually employ zero-based relative numbering in Forth data structures
 such as stacks, arrays and tables.
@@ -306,54 +266,12 @@ What would the _xxx_ be?
 The operations would produce the successive stacks: +
 [cols=7,options="header"]
 |===
-| word executed
-|
-|
-| `+`
-| `-`
-| `*`
-| `.`
-
-| stack result
-| `TOS`
-| `-16`
-| `57`
-| `-52`
-| `-104`
-| &#x23B5;
-
-|
-| `NOS`
-| `73`
-| `5`
-| `2`
-| &#x23B5;
-|
-
-|
-|
-| `5`
-| `2`
-| &#x23B5;
-|
-|
-
-|
-|
-| `2`
-| &#x23B5;
-|
-|
-|
-
-|
-|
-| &#x23B5;
-|
-|
-|
-|
-
+| word executed |       |          | `+`      | `-`     | `*`      | `.`
+| stack result  | `TOS` | `-16`    | `57`     | `-52`   | `-104`   | &#x23B5;
+|               | `NOS` | `73`     | `5`      | `2`     | &#x23B5; |
+|               |       | `5`      | `2`      | &#x23B5;|          |
+|               |       | `2`      | &#x23B5; |         |          |
+|               |       | &#x23B5; |          |         |          |
 |===
 
 So, after both lines, the terminal window shows
@@ -387,54 +305,12 @@ These actions are shown below.
 
 [cols=7,options="header"]
 |===
-| word executed
-|
-|
-| `drop`
-| `swap`
-| `rot`
-| `dup`
-
-| stack result
-| TOS
-| `-16`
-| `73`
-| `5`
-| `2`
-| `2`
-
-|
-| NOS
-| `73`
-| `5`
-| `73`
-| `5`
-| `2`
-
-|
-|
-| `5`
-| `2`
-| `2`
-| `73`
-| `5`
-
-|
-|
-| `2`
-| &#x23B5;
-| &#x23B5;
-| &#x23B5;
-| `73`
-
-|
-|
-| &#x23B5;
-|
-|
-|
-| &#x23B5;
-
+| word executed |     |          | `drop`   | `swap`   | `rot`    | `dup`
+| stack result  | TOS | `-16`    | `73`     | `5`      | `2`      | `2`
+|               | NOS | `73`     | `5`      | `73`     | `5`      | `2`
+|               |     | `5`      | `2`      | `2`      | `73`     | `5`
+|               |     | `2`      | &#x23B5; | &#x23B5; | &#x23B5; | `73`
+|               |     | &#x23B5; |          |          |          | &#x23B5;
 |===
 
 FlashForth also includes the words `over`, `tuck` and `pick` that act as shown below.
@@ -448,69 +324,15 @@ The content of this file must be sent to the microcontroller to define the word 
 
 [cols=6,options="header"]
 |===
-| word executed
-|
-|
-| `over`
-| `tuck`
-| `4 pick`
-
-| stack result
-| TOS
-| `-16`
-| `73`
-| `73`
-| `5`
-
-|
-| NOS
-| `73`
-| `-16`
-| `-16`
-| `73`
-
-|
-|
-| `5`
-| `73`
-| `73`
-| `-16`
-
-|
-|
-| `2`
-| `5`
-| `73`
-| `73`
-
-|
-|
-| &#x23B5;
-| `2`
-| `5`
-| `73`
-
-|
-|
-|
-| &#x23B5;
-| `2`
-| `5`
-
-|
-|
-|
-|
-| &#x23B5;
-| `2`
-
-|
-|
-|
-|
-|
-| &#x23B5;
-
+| word executed |     |          | `over`   | `tuck`   | `4 pick`
+| stack result  | TOS | `-16`    | `73`     | `73`     | `5`
+|               | NOS | `73`     | `-16`    | `-16`    | `73`
+|               |     | `5`      | `73`     | `73`     | `-16`
+|               |     | `2`      | `5`      | `73`     | `73`
+|               |     | &#x23B5; | `2`      | `5`      | `73`
+|               |     |          | &#x23B5; | `2`      | `5`
+|               |     |          |          | &#x23B5; | `2`
+|               |     |          |          |          | &#x23B5;
 |===
 
 From these actions, we can see that `0 pick` is the same as `dup`,
@@ -831,46 +653,16 @@ See the companion quick reference sheet for a more complete list.
 .Arithmetic operators for single (16-bit) numbers.
 [cols=3,options="header"]
 |===
-| word 
-| effect
-| comment
-
-| `+` 
-| `( n1 n2 -- n1+n2)` 
-| sum
-
-| `-` 
-| `( n1 n2 -- n1-n2)`
-| difference 
-
-| `*`
-| `( n1 n2 -- n1*n2)`
-| product
-
-| `/`
-| `( n1 n2 -- n1/n2)`
-| quotient
-
-| `mod`
-| `( n1 n2 -- n.rem)`
-| remainder
-
-| `*/` 
-| `( n1 n2 n3 -- n1*n2/n3)`
-| scaled quotient
-
-| `u/`
-| `( u1 u2 -- u1/u2)`
-| unsigned quotient
-
-| `u/mod`
-| `( u1 u2 -- rem quot)`
-| remainder and quotient
-
-| `u*/mod`
-| `( u1 u2 u3 -- rem quot)`
-| scaled remainder and quotient
-
+| word     | effect                    | comment
+| `+`      | `( n1 n2 -- n1+n2)`       | sum
+| `-`      | `( n1 n2 -- n1-n2)`       | difference 
+| `*`      | `( n1 n2 -- n1*n2)`       | product
+| `/`      | `( n1 n2 -- n1/n2)`       | quotient
+| `mod`    | `( n1 n2 -- n.rem)`       | remainder
+| `*/`     | `( n1 n2 n3 -- n1*n2/n3)` | scaled quotient
+| `u/`     | `( u1 u2 -- u1/u2)`       | unsigned quotient
+| `u/mod`  | `( u1 u2 -- rem quot)`    | remainder and quotient
+| `u*/mod` | `( u1 u2 u3 -- rem quot)` | scaled remainder and quotient
 |===
 
 For an example of using arithmetic operators, consider the 
@@ -937,30 +729,16 @@ If you `exit` from a for loop, you must drop the loop count with `rdrop`.
 .Flow control in FlashForth.
 [cols=2,options="header"]
 |===
-| Code 
-| Description
-
-| _cond_ `if` _xxx_ `else` _yyy_ `then`
-| Conditional execution.
-
-| `begin` _xxx_ `again`
-| Infinite loop.
-
-| `begin` _xxx_ _cond_ `until`
-| Loop until _cond_ is true.
-
-| `begin` _xxx_ _cond_ `while` _yyy_ `repeat`
-| Loop while _cond_ is true, _yyy_ is not executed on the last iteration.
-
-| _u_ `for` _xxx_ `next` 
-| Loop _u_ times.
-
-| `endit` 
-| Sets loop counter to zero so that we leave the loop when `next` is encountered.
-
-| `exit` 
-| Exit from a word.
-
+| Code                                        | Description
+| _cond_ `if` _xxx_ `else` _yyy_ `then`       | Conditional execution.
+| `begin` _xxx_ `again`                       | Infinite loop.
+| `begin` _xxx_ _cond_ `until`                | Loop until _cond_ is true.
+| `begin` _xxx_ _cond_ `while` _yyy_ `repeat` | Loop while _cond_ is true, _yyy_ is not executed 
+                                                on the last iteration.
+| _u_ `for` _xxx_ `next`                      | Loop _u_ times.
+| `endit`                                     | Sets loop counter to zero so that we leave the loop
+                                                when `next` is encountered.
+| `exit`                                      | Exit from a word.
 |===
 
 Here are a couple of examples of counted loops, 
