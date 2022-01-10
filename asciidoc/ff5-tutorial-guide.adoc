@@ -1,6 +1,6 @@
 = A Tutorial Guide to Programming PIC18, PIC24 and ATmega Microcontrollers with FlashForth
 Peter Jacobs
-2016 Version ported to ASCIIDOC -- 2021-12-31
+2022-01-10
 :toc: right
 :stylesheet: ./readthedocs.css
 :sectnums:
@@ -78,7 +78,7 @@ will work with microcontrollers that have:
 
 * a pinout as shown at the start of the datasheets (books) for each of the microcontrollers.
   You will be reading the pages of these books over and over but we include 
-  the following couple of pages from the PIC18F22K26/PIC18F46K22 datasheet to give an overview.
+  the following couple of pages from the PIC18F26K22/PIC18F46K22 datasheet to give an overview.
 
 * an internal arrangement that is built around an 8-bit or 16-bit data bus.
 
@@ -271,58 +271,70 @@ FlashForth via a serial terminal or shell.
 
 For our minimal system with either the PIC18F26K22 or PIC18F46K22 microcontroller,
 we elect to use the internal (16 MHz) oscillator multiplied by 4 by the PLL.
+
 Within the `MPLAB-X` development environment, 
-we started a new standalone project to build our FlashForth program
-that will use the microcontroller's UART serial port as the OPERATOR communications channel.
-Following the prompt screens, we selected a specific processor (PIC18F26K22), 
-our hardware tool (ICD3), and the compiler toolchain (mpasm).
+we navigate to the `pic18/src/` directory and open the project file `FF.X`
+to build our variant of the FlashForth program.
+At the time of writing these notes, the `FF.X` project file in the source directory had
+been configured for a PIC18F25K50 microcontroller.
+So, opening the project's properties,
+we select our specific device (PIC18F26K22), our hardware tool (ICD3),
+and the compiler toolchain (pic-as).
 
 To build the actual machine code that will be programmed into the flash memory
-of the microcontroller,
-it is sufficient to assemble the principal source file `ff-pic18.asm`
-along with the configuration (or header) files 
-`pic18f-main.cfg`, `pic18fxxxx.cfg`, `p18f2x4xk22.cfg`,
-and use the linker script `FF_0000.lkr`.
-The source file and config files can be found in the directory `pic18/src/`,
-while the linker file is in `pic18/lkr/`.
+of the PIC18F26K22,
+it is sufficient to assemble the principal source file `ff-pic18.S`
+along with the configuration files 
+`p18f-main.inc`, `p18fxxxx.inc`, `p18f2x4xk22.inc`.
+The source file and config files can be found in the directory `pic18/src/`.
 There may be other configuration files already added to the project but you can ignore them.
 
-We edited the processor-specific config file, `p18f2x4xk22.cfg`, writing `PLLCFG = ON` 
-to have the PLL enabled (giving F~OSC~ = 64 MHz),
-enable the watchdog timer with a 1:256 postscale (`WDTPS = 256`) 
+As shown in the MPLAB-X image below,
+we edit the PIC18F26K22-processor-specific config file, `p18f2x4xk22.inc`,
+writing `PLLCFG = ON` to have the PLL enabled (giving F~OSC~ = 64 MHz).
+Also, toward the bottom of the file we define `PLL_ENABLE` as `1`.
+
+image::MPLAB-X-build-of-FF5-for-pic18f26k22-2022.png[width=100%]
+
+To see your options for all of the configuration bits for your specific microcontroller, 
+it is convenient to open the MPLAB-X view from the main menu:
+`Window` -> `Target Memory Views` -> `Configuration Bits`.
+
+We also enable the watchdog timer with a 1:256 postscale (`WDTPS = 256`) 
 to get approximately a 1 second time-out period,
 and enable the external reset capability (`MCLRE = EXTMCLR`).
 Being able to reset the microcontroller by bringing the `MCLR` pin low is something that
 we find convenient when tinkering with new hardware.
-We set the final line as +
-`#define PLL ENABLE`
 
-We needed to edit the \verb!pic18f-main.cfg! file only to set the system clock frequency
-as `constant clock=d'64000000'`.
+Having enabled the PLL, we need to edit the `p18f-main.inc` file 
+to set the system clock frequency as `clock equ 64000000 // Hz`.
 With this clock frequency, the microcontroller requires approximately 7 mA current while
 the interpreter is running and waiting for input.
+We also enable the reception of a `Control-O` character as a warm reset with the line +
+`#define CTRL_O_WARM_RESET ENABLE`
 
 There are many other options for customizing the FlashForth program in this file,
 however, the default parameters are fine for the first build of our minimal system.
-To see your options for all of the configuration bits for your specific microcontroller, 
-it is convenient to open the MPLAB-X view from the main menu:
-`Window` -> `PIC Memory Views` -> `Configuration Bits`.
 
-With the specific microcontroller selected for the project, the config file
-`pic18fxxxx.cfg` will automatically select the appropriate MPLAB include file for 
-the microcontroller, be it `p18f26k22.inc` for the 28-pin chip on the home-made board
-or `p18f46k22.inc` for the 40-pin chip on the PICDEM 2 PLUS board.
-If the build process complains of not being able to find the MCU-specific include file,
-you may need to adjust the case-sensitivity of the assembler.
-This check box can be found in the Project Properties dialog, 
-under `General Options` for the `mpasmx` assembler, as shown in the following screen shot. 
+Before we build, we need to specify the placement of the code and data 
+as options to the linker.
+This can be done via the `Additional options` text entry for the `pic-as` assembler,
+as shown in the following screen shot. 
+Suitable values for these options have been provided by Mike Nordman,
+as a comment near the top of the `p18f2x4xk22.inc` configuration file. 
 
-image::MPLAB-X-mpasm-case-sensitivity.png[width=100%]
+image::MPLAB-X-pic-as-additional-options-2022.png[width=100%]
 
-The following image shows the result of building in Microchip's MPLAB X IDE.
+The final step is to program the FlashForth machine code 
+into the flash memory of the microcontroller,
+using whatever device programmer you happen to have plugged into your development system.
+We have seleted to use of an MPLAB ICD3.
+
+The first of the two MPLAB-X images above shows the result 
+of building and downloading the code to the microcontroller.
 The lower left frame in the MPLAB-X window shows the MCU resources used.
-With 426 bytes of SRAM used (another 3470 free) and 
-8948 bytes of program memory used (56588 free),
+With 398 bytes of SRAM used (another 3498 free) and 
+8941 bytes of program memory used (56595 free),
 For the PIC18F26K22 MCU, FlashForth occupies only about one-seventh of 
 the microcontroller's program memory.
 Most of the memory is available for your application.
@@ -330,12 +342,6 @@ For more details on the SRAM memory map,
 see the FlashForth 5 Quick Reference.
 There, Mikael Nordman has provided a memory map that shows how
 the SRAM memory is allocated within the FlashForth system. 
-
-image::MPLAB-X-build-of-Flash-Forth-for-PIC18F26K22-2016.png[width=100%]
-
-The final step is to program the FlashForth machine code into the flash memory of the microcontroller,
-using whatever device programmer you happen to have plugged into your development system.
-The Dashboard view in the screen shot above shows that we have seleted to use of the MPLAB ICD3.
 
 ## Building for the PIC24FV32KA302
 
@@ -417,18 +423,21 @@ The `ff-shell.tcl` is a GUI program that displays the interaction text in a dedi
 It requires the Tcl/Tk interpreter which is usually part of a Linux environment but it may be
 installed on MS-Windows or MacOS as well.
 
-The following images shows the `ff-shell.tcl` window just afer sending the content
-of the `flash-led.txt` file to the PIC18F26K22.
-The device name of `/dev/ttyUSB0` on the status line refers to the USB-to-serial interface 
+The following images shows the `ff-shell.tcl` window just after sending the content
+of the `flash-led-pic18.txt` file to the PIC18F26K22.
+The device name of `/dev/ttyACM0` on the status line refers to the USB-to-serial interface 
 that was plugged one of the PC's USB ports.
 It is convenient to start the program with the command
 ----
 $ sudo ./ff-shell.tcl 
 ----
-If necessary, you can adjust the communication settings by typing new values into the entry boxes 
+Use the `sudo` prefix only if you do not have sufficient permissions 
+to access the USB hardware on your system.
+If necessary, you can adjust the communication settings 
+by typing new values into the entry boxes 
 and pressing `Enter` to repoen the connection.
 
-image::ff-shell-tcl-flash-led-pic18.png[width=100%]
+image::ff-shell-tcl-flash-led-pic18-2022.png[width=100%]
 
 As you type characters into the main text widget, `ff-shell.tcl` intercepts them and sends them, 
 one at a time, via the serial port to the microcontroller.
@@ -441,13 +450,16 @@ If you have sent the microcontroller off to do a repetitive task, such as flashi
 you can regain the interpreter's attention by sending a `Control-O` character.
 The interpreter aborts the execution of the current word and does a software restart. 
 After initialization, the interpreter announces that it is ready to begin.
-Subsequently pressing `Enter` will get the `ok` response, as shown below.
 The warm restart action is also available from the menu as `Micro` -> `Warm Restart`.
+Subsequently typing the name of another word and pressing `Enter` will get a response.
+As shown below,
+the `Fcy` word will leave the instruction-cycle frequency (in kHz) on the stack.
 
-image::figs/ff-shell-tcl-control-O-pic18.png[width=100%]
+image::ff-shell-tcl-control-O-pic18-2022.png[width=100%]
 
 We find `ff-shell.tcl` a very convenient interaction environment, however,
-if you want to use a standard terminal program on Linux or MacOS, 
+if you want to use a standard terminal program on Linux, MS-Windows or MacOS, 
+there are a number of good options.
 
 
 # Introductory examples

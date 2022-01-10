@@ -18,15 +18,22 @@ These documents, in PDF format, are:
   At least, that's how I use it.
   It works in a PDF viewer just as well, with the advantage of being easily searchable.
 
+For the 2022 update, we have moved the source documents to ASCIIDOC and render them to HTML.
+This simplifies the source and (hopefully) results in more accessible documents,
+from which you can easily cut and paste the code.
+There is a trade-off, however, because the Quick Reference in HTML is not nearly as
+compact as the PDF version.
+
 The latest versions can be built from this source collection.
 Another benefit of cloning this repository is that the Forth sources 
 for the examples are available in an easily copied form
 (at least, easier than cutting and pasting from PDF files).
 
 ## Directory Contents
-* `latex/`: The LaTeX source for the text of the reports. 
+* `asciidoc/`: The ASCIIDOC source files for the web-based documents.
+* `latex/`: The LaTeX source for the text of the PDF reports. 
    The principal files are: 
-    * `elements-of-flash-forth.tex` 
+    * `elements-of-flash-forth-5.tex` 
     * `ff5-tutorial-guide-2016.tex`
     * `flash-forth-5-quick-ref.tex`
 * `figs/`: A directory of figures and photographs.  These are used to 
@@ -57,5 +64,5 @@ Attribution-ShareAlike 4.0 International License.
 
 ## Chief Gardener
 Peter Jacobs, 
-School of Mechanical and Mining Engineering, 
+(Retired from the) School of Mechanical and Mining Engineering, 
 The University of Queesnland.
