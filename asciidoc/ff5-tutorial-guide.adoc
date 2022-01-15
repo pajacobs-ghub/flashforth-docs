@@ -346,44 +346,27 @@ the SRAM memory is allocated within the FlashForth system.
 ## Building for the PIC24FV32KA302
 
 Building for the 16-bit PIC24 family is similar process.
-This time look for the source code files in the `pic24/` subdirectory.
-There are fewer config files but you may need to customize the closest one for 
-your particular processor.  
-Here is the required text in the `p24fk_config.inc` file 
-for our PIC24FV32KA302-I/SP microcontroller 
+This time look for the source code files in the `pic24/src/` subdirectory.
+For our PIC24FV32KA302-I/SP microcontroller 
 using its internal 8 MHz oscillator with 4X PLL
-and installed on the home-made minimal board:
+and installed on the home-made minimal board,
+the configuration files have suitable settings already.
+A new stand-alone MPLAB-X project was started and the following files added:
 
-----
-;;; Device memory sizes. Set according to your device.
-;;; You can increase the addressable flash range be decreasing the addressable ram.
-;;; Below is the setting for max amount of ram for PIC24FV32KA302
-.equ FLASH_SIZE,     0x5800  ; Flash size in bytes without the high byte
-                             ; See program memory size in the device datasheet.
-.equ RAM_SIZE,       0x0800  ; Ram size in bytes
-.equ EEPROM_SIZE,    0x0200  ; Eeprom size
+* the main source file `ff-pic24-30-33.s`,
 
-; For some reason the normal config macros did not work
-           .pushsection __FOSCSEL.sec, code
-           .global __FOSCSEL
-__FOSCSEL: .pword FNOSC_FRCPLL
-           .popsection
-; Start additions for FF Tutorial board with PIC24FV32KA30x
-           .pushsection __FOSC.sec, code
-           .global __FOSC
-__FOSC:    .pword OSCIOFNC_OFF
-           .popsection
-           .pushsection __FICD.sec, code
-           .global __FICD
-__FICD:    .pword ICS_PGx2
-           .popsection
-; End additions	   
+* `configs.c` to set the configuration bits via pragma statements,
 
-.equ FREQ_OSC, (8000000*4)	 ;Clock (Crystal)frequency (Hz)
-----
+* `ff24.inc` to set the memory sizes for the selected microcontroller,
 
-Once programmed, FlashForth uses 542 of the microcontroller's 2048 bytes of SRAM and
-4544 of the MCU's 11264 words of Flash memory.
+* `p24fk_config.inc` to set `FREQ_OSC` with your `FNOSC` selection in `configs.c` and
+  to select the operator UART.
+
+* `registers.inc` to define some regiaters in the Flashforth core dictionary.
+
+
+Flashforth uses 542 of the microcontroller's 2048 bytes of SRAM and
+4271 of the MCU's 11 kwords of Flash memory.
 This leaves most of the memory for your Forth application program.
 Although this appears to be a lot less than that available in the PIC18F26K22 MCU,
 this 16-bit MCU has lots of interesting hardware.
@@ -391,20 +374,21 @@ With instruction cycle frequency of 16 MHz and the interpreter waiting for input
 the current consumption is 7.5 mA, approximately the same as for the 8-bit PIC18F26K22. 
 
 
-## Building for the ATmega328P
+## Installing on an ATmega328P
 
-Assembling the FlashForth program within the AVR Studio IDE is fairly simple but
 Mike Nordman has made life even simpler for users of Arduino-like hardware by providing
-a prebuilt `.hex` file that can be programmed into the ATmega328P.
-Here is the command for doing so with avrdude on a Linux PC.
+a number of prebuilt `.hex` files that can be programmed into your AVR microcontroller.
+For the ATmega328P with a 16 MHz crystal,
+we chose to program the `avr/hex/328-16MHz-38400.hex` file.
+Here is the command for programming that file using avrdude on a Linux computer
+where an AVR ISP MkII programmer appears as the serial port `/dev/ttyUSB1`.
 ----
-$ sudo avrdude -p m328p -B 8.0 -c avrisp2 -P usb -e \
-  -U efuse:w:0x07:m \
-  -U hfuse:w:0xda:m \
+$ sudo avrdude -p m328p -B 8.0 -c avrisp2 -P /dev/ttyUSB1 -e \
+  -U efuse:w:0xff:m \
+  -U hfuse:w:0xdf:m \
   -U lfuse:w:0xff:m \
-  -U flash:w:ff_uno.hex:i
+  -U flash:w:328-16MHz-38400.hex:i
 ----
-The fuses are set to use the 16 MHz crystal on the Arduino-like board.
 
 
 # Interacting with FlashForth
@@ -469,7 +453,7 @@ or of FlashForth.
 Our interest will primarily be in driving the various peripherals of the MCU
 rather than doing arithmetic or dealing with abstract data.
 
-## Flash a light-emitting diode with the PIC24
+## Flash a light-emitting diode with the PIC18
 
 The microcontroller version of the "Hello, World" program is typically a program that
 flashes a single LED.
